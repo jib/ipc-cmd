@@ -1,0 +1,6 @@
+Makefile.PL
+MANIFEST
+README
+lib/IPC/Cmd.pm
+t/01_IPC-Cmd.t
+META.yml                                 Module meta-data (added by MakeMaker)
