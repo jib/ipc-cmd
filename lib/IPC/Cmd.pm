@@ -249,14 +249,31 @@ sub _open3_run {
     ### Perl Monastery (http://www.perlmonks.org/index.pl?node_id=151886).
     ### XXX that code didn't work.
     ### we now use the following code, thanks to theorbtwo
+
+    ### define them beforehand, so we always have defined FH's
+    ### to read from.
+    use Symbol;    
+    my $kidout      = Symbol::gensym();
+    my $kiderror    = Symbol::gensym();
+
+    ### Dup the filehandle so we can pass 'our' STDIN to the
+    ### child process. This stops us from having to pump input
+    ### from ourselves to the childprocess. However, we will need
+    ### to revive the FH afterwards, as IPC::Open3 closes it.
+    my $save_stdin;
+    open $save_stdin, "<&STDIN" or (
+        warn(loc("Could not dup STDIN: %1",$!)),
+        return
+    );
     
-    my ($kidin, $kidout, $kiderror);
+    
     my $pid = IPC::Open3::open3(
-                    $kidin, 
-                    $kidout, 
-                    $kiderror, 
+                    '<&STDIN',
+                    $kidout,
+                    $kiderror,
                     $cmd
                 );
+
     #print "Subprocess is at $pid";
     my $selector = IO::Select->new(
                         $kiderror, 
@@ -264,23 +281,32 @@ sub _open3_run {
                         $kidout     # we never get the input.. so jump through
                     );              # some hoops to do it :(
 
-    STDOUT->autoflush(1);   STDERR->autoflush(1);
+    STDOUT->autoflush(1);   STDERR->autoflush(1);   STDIN->autoflush(1);
     $kidout->autoflush(1)   if UNIVERSAL::can($kidout,   'autoflush');
     $kiderror->autoflush(1) if UNIVERSAL::can($kiderror, 'autoflush');
   
-        
     ### add an epxlicit break statement
     ### code courtesy of theorbtwo from #london.pm
     OUTER: while ( my @ready = $selector->can_read ) {
+
         for my $h ( @ready ) {
             my $buf;
+            
+            ### $len is the amount of bytes read
             my $len = sysread( $h, $buf, 4096 );    # try to read 4096 bytes
             
-            ### we got the input the kid was supposed to have -- pass it on
-            $kidin->print( $buf ) if $h->fileno == fileno( STDIN );
+            ### see perldoc -f sysread: it returns undef on error,
+            ### so bail out.
+            if( not defined $len ) {
+                warn(loc("Error reading from process: %1", $!));
+                last OUTER;
+            }
             
-            $_out_handler->( $buf ) if $h == $kidout;
-            $_err_handler->( $buf ) if $h == $kiderror;
+            ### check for $len. it may be 0, at which point we're
+            ### done reading, so don't try to process it.
+            ### if we would print anyway, we'd provide bogus information
+            $_out_handler->( "$buf" ) if $len && $h == $kidout;
+            $_err_handler->( "$buf" ) if $len && $h == $kiderror;
             
             ### child process is done printing.
             last OUTER if $h == $kidout and $len == 0
@@ -288,6 +314,14 @@ sub _open3_run {
     }
 
     waitpid $pid, 0; # wait for it to die
+    
+    ### restore STDIN after duping, or STDIN will be closed for
+    ### this current perl process!
+    open STDIN, "<&", $save_stdin or (
+        warn(loc("Could not restore STDIN: %1", $!)),
+        return
+    );        
+    
     return 1;
 }
 
