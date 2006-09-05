@@ -19,7 +19,7 @@ BEGIN {
                         $USE_IPC_RUN $USE_IPC_OPEN3
                     ];
 
-    $VERSION        = '0.24';
+    $VERSION        = '0.25';
     $VERBOSE        = 0;
     $USE_IPC_RUN    = $^O ne 'VMS';
     $USE_IPC_OPEN3  = $^O ne 'VMS';
@@ -247,50 +247,43 @@ sub _open3_run {
 
     ### Following code are adapted from Friar 'abstracts' in the
     ### Perl Monastery (http://www.perlmonks.org/index.pl?node_id=151886).
+    ### XXX that code didn't work.
+    ### we now use the following code, thanks to theorbtwo
+    
+    my ($kidin, $kidout, $kiderror);
+    my $pid = IPC::Open3::open3(
+                    $kidin, 
+                    $kidout, 
+                    $kiderror, 
+                    $cmd
+                );
+    #print "Subprocess is at $pid";
+    my $selector = IO::Select->new(
+                        $kiderror, 
+                        \*STDIN,    # use OUR stdin, not $kidin. Somehow,
+                        $kidout     # we never get the input.. so jump through
+                    );              # some hoops to do it :(
 
-    my ($infh, $outfh, $errfh); # open3 handles
-
-    my $pid = eval {
-        IPC::Open3::open3(
-            $infh   = Symbol::gensym(),
-            $outfh  = Symbol::gensym(),
-            $errfh  = Symbol::gensym(),
-            $cmd,
-        )
-    };
-
-
-    return (undef, $@) if $@;
-
-    my $sel = IO::Select->new; # create a select object
-    $sel->add($outfh, $errfh); # and add the fhs
-
-    STDOUT->autoflush(1); STDERR->autoflush(1);
-    $outfh->autoflush(1) if UNIVERSAL::can($outfh, 'autoflush');
-    $errfh->autoflush(1) if UNIVERSAL::can($errfh, 'autoflush');
-
-    while (my @ready = $sel->can_read) {
-        foreach my $fh (@ready) { # loop through buffered handles
-            # read up to 4096 bytes from this fh.
-            my $len = sysread $fh, my($buf), 4096;
-
-            if (not defined $len){
-                # There was an error reading
-                warn loc("Error from child: %1",$!);
-                return(undef, $!);
-            }
-            elsif ($len == 0){
-                $sel->remove($fh); # finished reading
-                next;
-            }
-            elsif ($fh == $outfh) {
-                $_out_handler->($buf);
-            } elsif ($fh == $errfh) {
-                $_err_handler->($buf);
-            } else {
-                warn loc("%1 error", 'IO::Select');
-                return(undef, $!);
-            }
+    STDOUT->autoflush(1);   STDERR->autoflush(1);
+    $kidout->autoflush(1)   if UNIVERSAL::can($kidout,   'autoflush');
+    $kiderror->autoflush(1) if UNIVERSAL::can($kiderror, 'autoflush');
+  
+        
+    ### add an epxlicit break statement
+    ### code courtesy of theorbtwo from #london.pm
+    OUTER: while ( my @ready = $selector->can_read ) {
+        for my $h ( @ready ) {
+            my $buf;
+            my $len = sysread( $h, $buf, 4096 );    # try to read 4096 bytes
+            
+            ### we got the input the kid was supposed to have -- pass it on
+            $kidin->print( $buf ) if $h->fileno == fileno( STDIN );
+            
+            $_out_handler->( $buf ) if $h == $kidout;
+            $_err_handler->( $buf ) if $h == $kiderror;
+            
+            ### child process is done printing.
+            last OUTER if $h == $kidout and $len == 0
         }
     }
 
