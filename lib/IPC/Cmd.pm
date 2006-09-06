@@ -596,6 +596,11 @@ C<IPC::Run>, C<IPC::Open3>
 This module by
 Jos Boumans E<lt>kane@cpan.orgE<gt>.
 
+=head1 ACKNOWLEDGEMENTS
+
+Thanks to James Mastros and Martijn van der Streek for their
+help in getting IPC::Open3 to behave nicely.
+
 =head1 COPYRIGHT
 
 This module is

@@ -1,7 +1,7 @@
+CHANGES
 lib/IPC/Cmd.pm
 Makefile.PL
 MANIFEST
-META.yml			Module meta-data (added by MakeMaker)
 README
 t/01_IPC-Cmd.t
 t/02_Interactive.t
