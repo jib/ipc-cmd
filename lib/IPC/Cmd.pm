@@ -1,5 +1,8 @@
 package IPC::Cmd;
 
+use strict;
+
+use constant                    IS_WIN32 => $^O eq 'MSWin32' ? 1  : 0;
 use Params::Check               qw[check];
 use Module::Load::Conditional   qw[can_load];
 use Locale::Maketext::Simple    Style => 'gettext';
@@ -8,7 +11,7 @@ use ExtUtils::MakeMaker();
 use File::Spec ();
 use Config;
 
-use strict;
+
 
 require Carp;
 $Carp::CarpLevel = 1;
@@ -180,8 +183,9 @@ sub run {
 
 
     ### Next, IPC::Open3 is know to fail on Win32, but works on Un*x.
-    } elsif (   $^O !~ /^(?:MSWin32|cygwin)$/
-                and $USE_IPC_OPEN3
+    } elsif (   #$^O !~ /^(?:MSWin32|cygwin)$/
+                #and 
+                $USE_IPC_OPEN3
                 and can_load(
                     modules => { map{$_ => '0.0'}
                                 qw|IPC::Open3 IO::Select Symbol| },
@@ -260,31 +264,34 @@ sub _open3_run {
     ### child process. This stops us from having to pump input
     ### from ourselves to the childprocess. However, we will need
     ### to revive the FH afterwards, as IPC::Open3 closes it.
+    ### We'll do the same for STDOUT and STDERR. It works without
+    ### duping them on non-unix derivatives, but not on win32.
     my $save_stdin;
     open $save_stdin, "<&STDIN" or (
         warn(loc("Could not dup STDIN: %1",$!)),
         return
     );
-    
-    
+
     my $pid = IPC::Open3::open3(
                     '<&STDIN',
-                    $kidout,
-                    $kiderror,
+                    (IS_WIN32 ? '>&STDOUT' : $kidout),
+                    (IS_WIN32 ? '>&STDERR' : $kiderror),
                     $cmd
                 );
 
-    #print "Subprocess is at $pid";
+    ### use OUR stdin, not $kidin. Somehow,
+    ### we never get the input.. so jump through
+    ### some hoops to do it :(
     my $selector = IO::Select->new(
-                        $kiderror, 
-                        \*STDIN,    # use OUR stdin, not $kidin. Somehow,
-                        $kidout     # we never get the input.. so jump through
-                    );              # some hoops to do it :(
+                        (IS_WIN32 ? \*STDERR : $kiderror), 
+                        \*STDIN,   
+                        (IS_WIN32 ? \*STDOUT : $kidout)     
+                    );              
 
     STDOUT->autoflush(1);   STDERR->autoflush(1);   STDIN->autoflush(1);
     $kidout->autoflush(1)   if UNIVERSAL::can($kidout,   'autoflush');
     $kiderror->autoflush(1) if UNIVERSAL::can($kiderror, 'autoflush');
-  
+
     ### add an epxlicit break statement
     ### code courtesy of theorbtwo from #london.pm
     OUTER: while ( my @ready = $selector->can_read ) {
@@ -314,7 +321,7 @@ sub _open3_run {
     }
 
     waitpid $pid, 0; # wait for it to die
-    
+
     ### restore STDIN after duping, or STDIN will be closed for
     ### this current perl process!
     open STDIN, "<&", $save_stdin or (

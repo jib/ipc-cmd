@@ -1,3 +1,11 @@
+BEGIN {
+    use Data::Dumper;
+    *CORE::GLOBAL::untie = sub {
+        warn Dumper [caller(1)];
+        CORE::untie(@_);
+    }
+}    
+
 BEGIN { chdir 't' if -d 't' };
 BEGIN { use lib '../lib' };
 
@@ -61,7 +69,10 @@ for my $aref ( @Conf ) {
     ok( -t STDIN,               "STDIN attached to a tty" );
     
     diag("Please enter some input. It will be echo'd back to you");
-    run( command => qq[$^X $Child], verbose => 1 );
+    my $buffer;
+    run( command => qq[$^X $Child], verbose => 1, buffer => \$buffer );
+    
+    ok( defined $buffer,        "   Input captured" );
 }
 
 ### check we didnt leak any FHs
