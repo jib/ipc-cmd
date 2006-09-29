@@ -2,9 +2,6 @@ package IPC::Cmd;
 
 use strict;
 
-### TODO: silence warnings when win32 passes buffer
-### TODO: get 02_interactive.t to work on win32
-
 BEGIN {
 
     use constant IS_VMS   => $^O ne 'VMS'                       ? 1 : 0;    
@@ -88,6 +85,10 @@ as adhere to your verbosity settings.
 
 =head2 $bool = IPC::Cmd->can_use_ipc_run( [VERBOSE] )
 
+Utility function that tells you if C<IPC::Run> is available. 
+If the verbose flag is passed, it will print diagnostic messages
+if C<IPC::Run> can not be found or loaded.
+
 =cut
 
 
@@ -110,6 +111,10 @@ sub can_use_ipc_run     {
 
 =head2 $bool = IPC::Cmd->can_use_ipc_open3( [VERBOSE] )
 
+Utility function that tells you if C<IPC::Open3> is available. 
+If the verbose flag is passed, it will print diagnostic messages
+if C<IPC::Open3> can not be found or loaded.
+
 =cut
 
 
@@ -128,6 +133,9 @@ sub can_use_ipc_open3   {
 }
 
 =head2 $bool = IPC::Cmd->can_capture_buffer
+
+Utility function that tells you if C<IPC::Cmd> is capable of
+capturing buffers in it's current configuration.
 
 =cut
 
@@ -294,7 +302,9 @@ sub run {
 
     ### did the user pass us a buffer to fill or not? if so, set this
     ### flag so we know what is expected of us
-    my $user_provided_buffer = $buffer == \$def_buf ? 0 : 1;
+    ### XXX this is now being ignored. in the future, we could add diagnostic
+    ### messages based on this logic
+    #my $user_provided_buffer = $buffer == \$def_buf ? 0 : 1;
     
     ### buffers that are to be captured
     my( @buffer, @buff_err, @buff_out );
@@ -326,8 +336,7 @@ sub run {
     ### flag indicating if the subcall went ok
     my $ok;
     
-    ### IPC::Run is first choice if we're running win32 and you ask
-    ### for a buffer, or if $USE_IPC_RUN is set.
+    ### IPC::Run is first choice if $USE_IPC_RUN is set.
     if( $USE_IPC_RUN and __PACKAGE__->can_use_ipc_run( 1 ) ) {
         ### ipc::run handlers needs the command as a string or an array ref
 
@@ -395,12 +404,6 @@ sub _open3_run {
     ### to revive the FH afterwards, as IPC::Open3 closes it.
     ### We'll do the same for STDOUT and STDERR. It works without
     ### duping them on non-unix derivatives, but not on win32.
-#     my $save_stdin;
-#     open $save_stdin, "<&STDIN" or (
-#         warn(loc("Could not dup STDIN: %1",$!)),
-#         return
-#     );
-    
     my @fds_to_dup = ( IS_WIN32 && !$verbose 
                             ? qw[STDIN STDOUT STDERR] 
                             : qw[STDIN]
@@ -460,11 +463,6 @@ sub _open3_run {
 
     ### restore STDIN after duping, or STDIN will be closed for
     ### this current perl process!
-#     open STDIN, "<&", $save_stdin or (
-#         warn(loc("Could not restore STDIN: %1", $!)),
-#         return
-#     );        
-    
     __PACKAGE__->__reopen_fds( @fds_to_dup );
     
     return 1;
@@ -574,6 +572,7 @@ sub _system_run {
         STDIN  => [qw|<&|, \*STDIN,  Symbol::gensym() ],
     );
 
+    ### dups FDs and stores them in a cache
     sub __dup_fds {
         my $self    = shift;
         my @fds     = @_;
@@ -601,7 +600,8 @@ sub _system_run {
         
         return 1;
     }
-    
+
+    ### reopens FDs from the cache    
     sub __reopen_fds {
         my $self    = shift;
         my @fds     = @_;
