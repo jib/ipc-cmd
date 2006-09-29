@@ -1,3 +1,11 @@
+BEGIN {
+    use Data::Dumper;
+    *CORE::GLOBAL::untie = sub {
+        warn Dumper [caller(1)];
+        CORE::untie(@_);
+    }
+}    
+
 BEGIN { chdir 't' if -d 't' };
 BEGIN { use lib '../lib' };
 
