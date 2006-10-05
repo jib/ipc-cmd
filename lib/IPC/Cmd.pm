@@ -10,12 +10,13 @@ BEGIN {
 
     use Exporter    ();
     use vars        qw[ @ISA $VERSION @EXPORT_OK $VERBOSE $DEBUG
-                        $USE_IPC_RUN $USE_IPC_OPEN3
+                        $USE_IPC_RUN $USE_IPC_OPEN3 $WARN
                     ];
 
-    $VERSION        = '0.25';
+    $VERSION        = '0.30';
     $VERBOSE        = 0;
     $DEBUG          = 0;
+    $WARN           = 1;
     $USE_IPC_RUN    = IS_WIN32 && !IS_WIN98;
     $USE_IPC_OPEN3  = not IS_VMS;
 
@@ -102,7 +103,7 @@ sub can_use_ipc_run     {
     ### if we dont have ipc::run, we obviously can't use it.
     return unless can_load(
                         modules => { 'IPC::Run' => '0.55' },        
-                        verbose => $verbose,
+                        verbose => ($WARN && $verbose),
                     );
                     
     ### otherwise, we're good to go
@@ -125,8 +126,8 @@ sub can_use_ipc_open3   {
     ### ipc::open3 works on every platform, but it can't capture buffers
     ### on win32 :(
     return unless can_load(
-        modules => { map{$_ => '0.0'} qw|IPC::Open3 IO::Select Symbol| },
-        verbose => $verbose,
+        modules => { map {$_ => '0.0'} qw|IPC::Open3 IO::Select Symbol| },
+        verbose => ($WARN && $verbose),
     );
     
     return 1;
@@ -698,6 +699,13 @@ when available and suitable. Defaults to true if you are on C<Win32>.
 
 This variable controls whether IPC::Cmd will try to use L<IPC::Open3>
 when available and suitable. Defaults to true.
+
+=head2 $IPC::Cmd::WARN
+
+This variable controls whether run time warnings should be issued, like
+the failure to load an C<IPC::*> module you explicitly requested.
+
+Defaults to true. Turn this off at your own risk.
 
 =head1 Caveats
 

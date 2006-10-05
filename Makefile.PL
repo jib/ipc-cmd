@@ -1,12 +1,10 @@
 use ExtUtils::MakeMaker;
 use strict;
 
-for ( qw[IPC::Run IPC::Open3] ) {
-    eval "use $_";
-    if( $@ ) {
-        warn qq[You do not have "$_" installed - please consider installing it\n].
-             qq[It's not required, but trust me, you'll thank me later ;)\n];   
-    }
+### promote IPC::Run on windows
+if ( $^O eq 'MSWin32' and !(eval { require IPC::Run }) ) {
+    warn qq[You do not have "IPC::Run" installed - consider installing it.\n].
+         qq[It's not required, but trust me, you'll thank me later ;)\n];   
 }    
 
 WriteMakefile (
