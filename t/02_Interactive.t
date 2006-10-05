@@ -1,11 +1,3 @@
-BEGIN {
-    use Data::Dumper;
-    *CORE::GLOBAL::untie = sub {
-        warn Dumper [caller(1)];
-        CORE::untie(@_);
-    }
-}    
-
 BEGIN { chdir 't' if -d 't' };
 BEGIN { use lib '../lib' };
 
@@ -75,11 +67,19 @@ for my $aref ( @Conf ) {
     diag("Config: IPC::Run = $aref->[0] IPC::Open3 = $aref->[1]");
     ok( -t STDIN,               "STDIN attached to a tty" );
     
-    diag("Please enter some input. It will be echo'd back to you");
-    my $buffer;
-    run( command => qq[$^X $Child], verbose => 1, buffer => \$buffer );
+    for my $cmd ( qq[$^X $Child], qq[$^X $Child | $^X -neprint] ) {
     
-    ok( defined $buffer,        "   Input captured" );
+        diag("Please enter some input. It will be echo'd back to you");
+        my $buffer;
+        my $ok = run( command => $cmd, verbose => 1, buffer => \$buffer );
+    
+        ok( $ok,                    "   Command '$cmd' ran succesfully" );
+    
+        SKIP: {
+            skip "No buffers available", 1 unless $Class->can_capture_buffer;
+            ok( defined $buffer,    "   Input captured" );
+        }
+    }
 }
 
 ### check we didnt leak any FHs
