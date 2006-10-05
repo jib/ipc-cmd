@@ -1,8 +1,17 @@
+Changes for 0.29_01 Thu Oct  5 16:34:44 CEST 2006
+=================================================
+* Rework IPC::Cmd heavily to work better on win32
+* Add $WARN as global variable
+* Pass parents STDOUT/STDERR to IPC::Open3 to attach STDOUT/STDERR to
+  the current tty. This doesn't support capturing buffers, but there
+  seems no way to do this, without using Win32::* modules.
+	 
+
 Changes for 0.25    Wed Sep  6 17:32:18 CEST 2006
 =================================================
-*   Add proper interactive support for IPC::Open3
-    Thanks to James Mastros and Martijn van der
-    Streek
-*   Add an interactive test file for this support
-    (skipped under Test::Harness)
+* Add proper interactive support for IPC::Open3
+  Thanks to James Mastros and Martijn van de
+  Streek
+* Add an interactive test file for this support
+  (skipped under Test::Harness)
     
