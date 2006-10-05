@@ -75,19 +75,11 @@ for my $aref ( @Conf ) {
     diag("Config: IPC::Run = $aref->[0] IPC::Open3 = $aref->[1]");
     ok( -t STDIN,               "STDIN attached to a tty" );
     
-    for my $cmd ( qq[$^X $Child], qq[$^X $Child | $^X -neprint] ) {
+    diag("Please enter some input. It will be echo'd back to you");
+    my $buffer;
+    run( command => qq[$^X $Child], verbose => 1, buffer => \$buffer );
     
-        diag("Please enter some input. It will be echo'd back to you");
-        my $buffer;
-        my $ok = run( command => $cmd, verbose => 1, buffer => \$buffer );
-    
-        ok( $ok,                    "   Command '$cmd' ran succesfully" );
-    
-        SKIP: {
-            skip "No buffers available", 1 unless $Class->can_capture_buffer;
-            ok( defined $buffer,    "   Input captured" );
-        }
-    }
+    ok( defined $buffer,        "   Input captured" );
 }
 
 ### check we didnt leak any FHs
