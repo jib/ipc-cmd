@@ -1,3 +1,7 @@
+Changes for 0.30    Wed Oct 11 13:00:40 CEST 2006
+=================================================
+* 0.29_01 upgraded to stable.
+
 Changes for 0.29_01 Thu Oct  5 16:34:44 CEST 2006
 =================================================
 * Rework IPC::Cmd heavily to work better on win32
@@ -6,7 +10,6 @@ Changes for 0.29_01 Thu Oct  5 16:34:44 CEST 2006
   the current tty. This doesn't support capturing buffers, but there
   seems no way to do this, without using Win32::* modules.
 	 
-
 Changes for 0.25    Wed Sep  6 17:32:18 CEST 2006
 =================================================
 * Add proper interactive support for IPC::Open3
