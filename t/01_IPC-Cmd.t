@@ -22,6 +22,13 @@ my $Have_IPC_Open3  = $Class->can_use_ipc_open3;
 
 $IPC::Cmd::VERBOSE  = $IPC::Cmd::VERBOSE = $Verbose;
 
+### run tests in various configurations, based on what modules we have
+my @Prefs = ( 
+    [ $Have_IPC_Run, $Have_IPC_Open3 ], 
+    [ 0,             $Have_IPC_Open3 ], 
+    [ 0,             0 ] 
+);
+
 ### can_run tests
 {
     ok( can_run('perl'),                q[Found 'perl' in your path] );
@@ -38,15 +45,8 @@ $IPC::Cmd::VERBOSE  = $IPC::Cmd::VERBOSE = $Verbose;
         [ [$^X,qw[-eprint+42 |], $^X, qw|-neprint|], qr/42/,            ],
     ];
 
-    ### run tests in various configurations, based on what modules we have
-    my @prefs = ( 
-        [ $Have_IPC_Run, $Have_IPC_Open3 ], 
-        [ 0,             $Have_IPC_Open3 ], 
-        [ 0,             0 ] 
-    );
-
     ### for each configuarion
-    for my $pref ( @prefs ) {
+    for my $pref ( @Prefs ) {
         diag( "Running config: IPC::Run: $pref->[0] IPC::Open3: $pref->[1]" )
             if $Verbose;
 
@@ -108,6 +108,20 @@ $IPC::Cmd::VERBOSE  = $IPC::Cmd::VERBOSE = $Verbose;
     }
 }
 
+
+### test failures
+{   ### for each configuarion
+    for my $pref ( @Prefs ) {
+        diag( "Running config: IPC::Run: $pref->[0] IPC::Open3: $pref->[1]" )
+            if $Verbose;
+
+        $IPC::Cmd::USE_IPC_RUN    = $IPC::Cmd::USE_IPC_RUN      = $pref->[0];
+        $IPC::Cmd::USE_IPC_OPEN3  = $IPC::Cmd::USE_IPC_OPEN3    = $pref->[1];
+
+        my $ok = run( command => "$^X -ledie" );
+        ok( !$ok,               "Failure caught" );
+    }
+}    
 
 __END__
 
