@@ -10,7 +10,7 @@ if ( $^O eq 'MSWin32' and !(eval{require IPC::Run}) and !$opts->{'b'} ) {
     warn "IPC::Run is an optional requirement for Win32 systems to ".
          "capture buffers.\n" .
          "If you would like to install IPC::Cmd with buffer support ".
-         "on Win32, please this Makefile.PL with the '-b' option\n";
+         "on Win32, please rerun this Makefile.PL with the '-b' option\n";
 }    
 
 my $prereqs = {
