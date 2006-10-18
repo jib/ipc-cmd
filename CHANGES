@@ -1,3 +1,9 @@
+Changes for 0.32    Fri Oct 13 13:08:23 CEST 2006
+=================================================
+* Fix logic to detect IPC::Open3 usability on various platforms
+* Propogate the programs exit code properly when using IPC::Open3
+* Make IPC::Run a dependency on request
+
 Changes for 0.30    Wed Oct 11 13:00:40 CEST 2006
 =================================================
 * 0.29_01 upgraded to stable.
