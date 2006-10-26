@@ -28,5 +28,5 @@ WriteMakefile (
     dist            => { COMPRESS => 'gzip -9f', SUFFIX => 'gz' },
     PREREQ_PM       => $prereqs,
     AUTHOR          => 'Jos Boumans <kane[at]cpan.org>',
-	ABSTRACT        => 'A cross platform way of running (interactive) commandline programs.'
+    ABSTRACT        => 'A cross platform way of running (interactive) commandline programs.'
 ); 
