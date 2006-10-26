@@ -13,7 +13,7 @@ BEGIN {
                         $USE_IPC_RUN $USE_IPC_OPEN3 $WARN
                     ];
 
-    $VERSION        = '0.34';
+    $VERSION        = '0.35_01';
     $VERBOSE        = 0;
     $DEBUG          = 0;
     $WARN           = 1;
@@ -572,7 +572,7 @@ sub _system_run {
     my %Map = (
         STDOUT => [qw|>&|, \*STDOUT, Symbol::gensym() ],
         STDERR => [qw|>&|, \*STDERR, Symbol::gensym() ],
-        STDIN  => [qw|<&=|, \*STDIN,  Symbol::gensym() ],
+        STDIN  => [qw|<&|, \*STDIN,  Symbol::gensym() ],
     );
 
     ### dups FDs and stores them in a cache
@@ -585,8 +585,11 @@ sub _system_run {
         for my $name ( @fds ) {
             my($redir, $fh, $glob) = @{$Map{$name}} or (
                 Carp::carp(loc("No such FD: '%1'", $name)), next );
-
-            open $glob, $redir.fileno($fh) or (
+            
+            ### MUST use the 2-arg version of open for dup'ing for 
+            ### 5.6.x compatibilty. 5.8.x can use 3-arg open
+            ### see perldoc5.6.2 -f open for details            
+            open $glob, $redir . fileno($fh) or (
                         Carp::carp(loc("Could not dup '$name': %1", $!)),
                         return
                     );        
@@ -594,7 +597,7 @@ sub _system_run {
             ### we should re-open this filehandle right now, not
             ### just dup it
             if( $redir eq '>&' ) {
-                open( $fh, '>'.File::Spec->devnull ) or (
+                open( $fh, '>', File::Spec->devnull ) or (
                     Carp::carp(loc("Could not reopen '$name': %1", $!)),
                     return
                 );
@@ -615,7 +618,10 @@ sub _system_run {
             my($redir, $fh, $glob) = @{$Map{$name}} or (
                 Carp::carp(loc("No such FD: '%1'", $name)), next );
 
-            open( $fh, $redir.fileno($glob) ) or (
+            ### MUST use the 2-arg version of open for dup'ing for 
+            ### 5.6.x compatibilty. 5.8.x can use 3-arg open
+            ### see perldoc5.6.2 -f open for details
+            open( $fh, $redir . fileno($glob) ) or (
                     Carp::carp(loc("Could not restore '$name': %1", $!)),
                     return
                 ); 
