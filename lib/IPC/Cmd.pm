@@ -572,7 +572,7 @@ sub _system_run {
     my %Map = (
         STDOUT => [qw|>&|, \*STDOUT, Symbol::gensym() ],
         STDERR => [qw|>&|, \*STDERR, Symbol::gensym() ],
-        STDIN  => [qw|<&|, \*STDIN,  Symbol::gensym() ],
+        STDIN  => [qw|<&=|, \*STDIN,  Symbol::gensym() ],
     );
 
     ### dups FDs and stores them in a cache
@@ -585,8 +585,8 @@ sub _system_run {
         for my $name ( @fds ) {
             my($redir, $fh, $glob) = @{$Map{$name}} or (
                 Carp::carp(loc("No such FD: '%1'", $name)), next );
-            
-            open $glob, $redir,$fh or (
+
+            open $glob, $redir.fileno($fh) or (
                         Carp::carp(loc("Could not dup '$name': %1", $!)),
                         return
                     );        
@@ -594,7 +594,7 @@ sub _system_run {
             ### we should re-open this filehandle right now, not
             ### just dup it
             if( $redir eq '>&' ) {
-                open( $fh, '>', File::Spec->devnull ) or (
+                open( $fh, '>'.File::Spec->devnull ) or (
                     Carp::carp(loc("Could not reopen '$name': %1", $!)),
                     return
                 );
@@ -615,7 +615,7 @@ sub _system_run {
             my($redir, $fh, $glob) = @{$Map{$name}} or (
                 Carp::carp(loc("No such FD: '%1'", $name)), next );
 
-            open( $fh, $redir,$glob ) or (
+            open( $fh, $redir.fileno($glob) ) or (
                     Carp::carp(loc("Could not restore '$name': %1", $!)),
                     return
                 ); 
