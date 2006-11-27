@@ -669,7 +669,7 @@ settings honored cleanly.
 Otherwise, if the variable C<$IPC::Cmd::USE_IPC_OPEN3> is set to true 
 (See the C<GLOBAL VARIABLES> Section), try to execute the command using
 C<IPC::Open3>. Buffers will be available on all platforms except C<Win32>,
-interactive commands will still execute cleanly, and also your  verbosity
+interactive commands will still execute cleanly, and also your verbosity
 settings will be adhered to nicely;
 
 =item *
