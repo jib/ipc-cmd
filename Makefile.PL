@@ -7,10 +7,15 @@ getopts( 'b', $opts );
 
 ### promote IPC::Run on windows
 if ( $^O eq 'MSWin32' and !(eval{require IPC::Run}) and !$opts->{'b'} ) {
-    warn "IPC::Run is an optional requirement for Win32 systems to ".
-         "capture buffers.\n" .
-         "If you would like to install IPC::Cmd with buffer support ".
-         "on Win32, please rerun this Makefile.PL with the '-b' option\n";
+    warn "******************************************************************\n".
+         "***\n".
+         "*** IPC::Run is an optional requirement for Win32 systems to\n".
+         "*** capture buffers.\n" .
+         "*** If you would like to install IPC::Cmd with buffer support\n".
+         "*** on Win32, please rerun this Makefile.PL with the '-b' option\n".
+         "*** or install IPC::Run manually\n".
+         "***\n".
+         "******************************************************************\n";
 }    
 
 my $prereqs = {
