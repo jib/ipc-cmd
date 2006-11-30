@@ -25,6 +25,7 @@ BEGIN {
 }
 
 require Carp;
+use File::Spec;
 use Params::Check               qw[check];
 use Module::Load::Conditional   qw[can_load];
 use Locale::Maketext::Simple    Style => 'gettext';
@@ -186,7 +187,10 @@ sub can_run {
         return MM->maybe_command($command);
 
     } else {
-        for my $dir (split /\Q$Config::Config{path_sep}\E/, $ENV{PATH}) {
+        for my $dir (
+            (split /\Q$Config::Config{path_sep}\E/, $ENV{PATH}),
+            File::Spec->curdir
+        ) {           
             my $abs = File::Spec->catfile($dir, $command);
             return $abs if $abs = MM->maybe_command($abs);
         }
