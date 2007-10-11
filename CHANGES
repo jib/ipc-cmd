@@ -1,3 +1,9 @@
+Changes for 0.38    Thu Oct 11 17:04:28 CEST 2007
+=================================================
+* Address perlbug [perl #46293] IPC::Cmd can lose stderr 
+* Apply [perl #46111] [PATCH] Add tests for stderr-only 
+  in IPC::Cmd to test for that bug
+  
 Changes for 0.36    Fri Nov 24 14:55:56 CET 2006
 =================================================
 * 3-arg open doesn't work on 5.6.2 properly, so we changed
