@@ -1,3 +1,8 @@
+Changes for 0.39_01 Tue Oct 16 10:59:35 CEST 2007
+=================================================
+* Address test failure on 5.00505 by using 2-arg
+  version of open, instead of 3-arg version.
+
 Changes for 0.38    Thu Oct 11 17:04:28 CEST 2007
 =================================================
 * Address perlbug [perl #46293] IPC::Cmd can lose stderr 
