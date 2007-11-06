@@ -13,7 +13,7 @@ BEGIN {
                         $USE_IPC_RUN $USE_IPC_OPEN3 $WARN
                     ];
 
-    $VERSION        = '0.39_01';
+    $VERSION        = '0.40';
     $VERBOSE        = 0;
     $DEBUG          = 0;
     $WARN           = 1;
@@ -125,8 +125,12 @@ sub can_use_ipc_open3   {
     my $self    = shift;
     my $verbose = shift || 0;
 
-    ### ipc::open3 works on every platform, but it can't capture buffers
-    ### on win32 :(
+    ### ipc::open3 is not working on VMS becasue of a lack of fork.
+    ### XXX todo, win32 also does not have fork, so need to do more research.
+    return if IS_VMS;
+
+    ### ipc::open3 works on every non-VMS platform platform, but it can't 
+    ### capture buffers on win32 :(
     return unless can_load(
         modules => { map {$_ => '0.0'} qw|IPC::Open3 IO::Select Symbol| },
         verbose => ($WARN && $verbose),
