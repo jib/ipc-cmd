@@ -1,3 +1,9 @@
+Changes for 0.40    Wed Oct 17 10:57:11 CEST 2007
+=================================================
+* Promote 0.39_01 to stable. Users who already have
+  0.38 installed do not need to upgrade. This is merely
+  a test suit portability fix for perl 5.005
+
 Changes for 0.39_01 Tue Oct 16 10:59:35 CEST 2007
 =================================================
 * Address test failure on 5.00505 by using 2-arg
