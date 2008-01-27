@@ -7,11 +7,11 @@ use lib qw[../lib];
 use File::Spec ();
 use Test::More 'no_plan';
 
-my $Class   = 'IPC::Cmd';
-my @Funcs   = qw[run can_run];
-my @Meths   = qw[can_use_ipc_run can_use_ipc_open3 can_capture_buffer];
-my $IsWin32 = $^O eq 'MSWin32';
-my $Verbose = @ARGV ? 1 : 0;
+my $Class       = 'IPC::Cmd';
+my @Funcs       = qw[run can_run];
+my @Meths       = qw[can_use_ipc_run can_use_ipc_open3 can_capture_buffer];
+my $IsWin32     = $^O eq 'MSWin32';
+my $Verbose     = @ARGV ? 1 : 0;
 
 use_ok( $Class,         $_ ) for @Funcs;
 can_ok( $Class,         $_ ) for @Funcs, @Meths;
@@ -43,6 +43,8 @@ my @Prefs = (
         [ [$^X, '-v'],                               qr/larry\s+wall/i, ],
         [ "$^X -eprint+42 | $^X -neprint",           qr/42/,            ],
         [ [$^X,qw[-eprint+42 |], $^X, qw|-neprint|], qr/42/,            ],
+        [ [$^X, '-eprint+shift', q|a b|],            qr/a b/,           ],
+        [ "$^X -eprint+shift 'a b'",                 qr/a b/,           ],
     ];
 
     diag( "Running tests that print only to stdout" ) if $Verbose;
