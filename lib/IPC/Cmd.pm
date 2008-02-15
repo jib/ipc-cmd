@@ -303,11 +303,14 @@ sub run {
                      allow    => sub { !ref($_[0]) or ref($_[0]) eq 'ARRAY' } 
         },
     };
-
+    
     unless( check( $tmpl, \%hash, $VERBOSE ) ) {
         Carp::carp(loc("Could not validate input: %1", Params::Check->last_error));
         return;
     };        
+
+    ### strip any empty elements from $cmd if present
+    $cmd = [ grep { length && defined } @$cmd ] if ref $cmd;
 
     print loc("Running [%1]...\n", (ref $cmd ? "@$cmd" : $cmd)) if $verbose;
 
