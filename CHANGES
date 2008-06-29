@@ -1,3 +1,7 @@
+Changes for 0.41_02 Sun Jun 29 17:38:47 CEST 2008
+=================================================
+* Implement timeouts for commands (#36437)
+
 Changes for 0.41_01 Sun Apr  6 14:10:17 CEST 2008
 =================================================
 * Strip empty whitespace from array ref commands -- some 
