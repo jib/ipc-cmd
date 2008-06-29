@@ -8,6 +8,7 @@ use File::Spec ();
 use Test::More 'no_plan';
 
 my $Class       = 'IPC::Cmd';
+my $AClass      = $Class . '::TimeOut';
 my @Funcs       = qw[run can_run];
 my @Meths       = qw[can_use_ipc_run can_use_ipc_open3 can_capture_buffer];
 my $IsWin32     = $^O eq 'MSWin32';
@@ -125,10 +126,28 @@ my @Prefs = (
         $IPC::Cmd::USE_IPC_RUN    = $IPC::Cmd::USE_IPC_RUN      = $pref->[0];
         $IPC::Cmd::USE_IPC_OPEN3  = $IPC::Cmd::USE_IPC_OPEN3    = $pref->[1];
 
-        my $ok = run( command => "$^X -ledie" );
-        ok( !$ok,               "Failure caught" );
+        my $ok = run( command => "$^X -edie" );
+        ok( !$ok,               "Non-zero exit caught" );
     }
 }    
+
+### timeout tests
+{   my $timeout = 1;
+    for my $pref ( @Prefs ) {
+        diag( "Running config: IPC::Run: $pref->[0] IPC::Open3: $pref->[1]" )
+            if $Verbose;
+
+        $IPC::Cmd::USE_IPC_RUN    = $IPC::Cmd::USE_IPC_RUN      = $pref->[0];
+        $IPC::Cmd::USE_IPC_OPEN3  = $IPC::Cmd::USE_IPC_OPEN3    = $pref->[1];
+
+        my ($ok,$err) = run( command => "$^X -esleep+4", timeout => $timeout );
+        ok( !$ok,               "Timeout caught" );
+        ok( $err,               "   Error stored" );
+        isa_ok( $err, $AClass,  "   Error object" );
+    }
+}    
+    
+
 
 __END__
 

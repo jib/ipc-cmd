@@ -4,16 +4,17 @@ use strict;
 
 BEGIN {
 
-    use constant IS_VMS   => $^O eq 'VMS'                       ? 1 : 0;    
-    use constant IS_WIN32 => $^O eq 'MSWin32'                   ? 1 : 0;
-    use constant IS_WIN98 => (IS_WIN32 and !Win32::IsWinNT())   ? 1 : 0;
+    use constant IS_VMS      => $^O eq 'VMS'                       ? 1 : 0;    
+    use constant IS_WIN32    => $^O eq 'MSWin32'                   ? 1 : 0;
+    use constant IS_WIN98    => (IS_WIN32 and !Win32::IsWinNT())   ? 1 : 0;
+    use constant ALARM_CLASS => __PACKAGE__ . '::TimeOut';
 
     use Exporter    ();
     use vars        qw[ @ISA $VERSION @EXPORT_OK $VERBOSE $DEBUG
                         $USE_IPC_RUN $USE_IPC_OPEN3 $WARN
                     ];
 
-    $VERSION        = '0.41_01';
+    $VERSION        = '0.41_02';
     $VERBOSE        = 0;
     $DEBUG          = 0;
     $WARN           = 1;
@@ -51,7 +52,8 @@ IPC::Cmd - finding and running system commands made easy
     my $buffer;
     if( scalar run( command => $cmd,
                     verbose => 0,
-                    buffer  => \$buffer )
+                    buffer  => \$buffer,
+                    timeout => 20 )
     ) {
         print "fetched webpage successfully: $buffer\n";
     }
@@ -202,9 +204,9 @@ sub can_run {
     }
 }
 
-=head2 $ok | ($ok, $err, $full_buf, $stdout_buff, $stderr_buff) = run( command => COMMAND, [verbose => BOOL, buffer => \$SCALAR] );
+=head2 $ok | ($ok, $err, $full_buf, $stdout_buff, $stderr_buff) = run( command => COMMAND, [verbose => BOOL, buffer => \$SCALAR, timeout => DIGIT] );
 
-C<run> takes 3 arguments:
+C<run> takes 4 arguments:
 
 =over 4
 
@@ -239,6 +241,16 @@ and inspect the individual buffers.
 Of course, this requires that the underlying call supports buffers. See
 the note on buffers right above.
 
+=item timeout
+
+Sets the maximum time the command is allowed to run before aborting,
+using the built-in C<alarm()> call. If the timeout is triggered, the
+C<errorcode> in the return value will be set to an object of the 
+C<IPC::Cmd::TimeOut> class. See the C<errorcode> section below for
+details.
+
+Defaults to C<0>, meaning no timeout is set.
+
 =back
 
 C<run> will return a simple C<true> or C<false> when called in scalar
@@ -256,7 +268,9 @@ not.
 
 If the first element of the return value (success) was 0, then some
 error occurred. This second element is the error code the command
-you requested exited with, if available.
+you requested exited with, if available. If the error was a timeout,
+the C<errorcode> will be set to an object of the C<IPC::Cmd::TimeOut> 
+class.
 
 =item full_buffer
 
@@ -295,13 +309,14 @@ sub run {
     ### if the user didn't provide a buffer, we'll store it here.
     my $def_buf = '';
     
-    my($verbose,$cmd,$buffer);
+    my($verbose,$cmd,$buffer,$timeout);
     my $tmpl = {
         verbose => { default  => $VERBOSE,  store => \$verbose },
         buffer  => { default  => \$def_buf, store => \$buffer },
         command => { required => 1,         store => \$cmd,
-                     allow    => sub { !ref($_[0]) or ref($_[0]) eq 'ARRAY' } 
+                     allow    => sub { !ref($_[0]) or ref($_[0]) eq 'ARRAY' }, 
         },
+        timeout => { default  => 0,         store => \$timeout },                    
     };
     
     unless( check( $tmpl, \%hash, $VERBOSE ) ) {
@@ -350,33 +365,49 @@ sub run {
     ### flag indicating if the subcall went ok
     my $ok;
     
-    ### IPC::Run is first choice if $USE_IPC_RUN is set.
-    if( $USE_IPC_RUN and __PACKAGE__->can_use_ipc_run( 1 ) ) {
-        ### ipc::run handlers needs the command as a string or an array ref
-
-        __PACKAGE__->_debug( "# Using IPC::Run. Have buffer: $have_buffer" )
-            if $DEBUG;
+    ### we might be having a timeout set
+    eval {   
+        local $SIG{ALRM} = sub { die bless {}, ALARM_CLASS } if $timeout;
+        alarm $timeout || 0;
+    
+        ### IPC::Run is first choice if $USE_IPC_RUN is set.
+        if( $USE_IPC_RUN and __PACKAGE__->can_use_ipc_run( 1 ) ) {
+            ### ipc::run handlers needs the command as a string or an array ref
+    
+            __PACKAGE__->_debug( "# Using IPC::Run. Have buffer: $have_buffer" )
+                if $DEBUG;
+                
+            $ok = __PACKAGE__->_ipc_run( $cmd, $_out_handler, $_err_handler );
+    
+        ### since IPC::Open3 works on all platforms, and just fails on
+        ### win32 for capturing buffers, do that ideally
+        } elsif ( $USE_IPC_OPEN3 and __PACKAGE__->can_use_ipc_open3( 1 ) ) {
+    
+            __PACKAGE__->_debug("# Using IPC::Open3. Have buffer: $have_buffer")
+                if $DEBUG;
+    
+            ### in case there are pipes in there;
+            ### IPC::Open3 will call exec and exec will do the right thing 
+            $ok = __PACKAGE__->_open3_run( 
+                                    $cmd, $_out_handler, $_err_handler, $verbose 
+                                );
             
-        $ok = __PACKAGE__->_ipc_run( $cmd, $_out_handler, $_err_handler );
-
-    ### since IPC::Open3 works on all platforms, and just fails on
-    ### win32 for capturing buffers, do that ideally
-    } elsif ( $USE_IPC_OPEN3 and __PACKAGE__->can_use_ipc_open3( 1 ) ) {
-
-        __PACKAGE__->_debug( "# Using IPC::Open3. Have buffer: $have_buffer" )
-            if $DEBUG;
-
-        ### in case there are pipes in there;
-        ### IPC::Open3 will call exec and exec will do the right thing 
-        $ok = __PACKAGE__->_open3_run( 
-                                $cmd, $_out_handler, $_err_handler, $verbose 
-                            );
+        ### if we are allowed to run verbose, just dispatch the system command
+        } else {
+            __PACKAGE__->_debug( "# Using system(). Have buffer: $have_buffer" )
+                if $DEBUG;
+            $ok = __PACKAGE__->_system_run( 
+                                    (ref $cmd ? "@$cmd" : $cmd), $verbose 
+                                );
+        }
         
-    ### if we are allowed to run verbose, just dispatch the system command
-    } else {
-        __PACKAGE__->_debug( "# Using system(). Have buffer: $have_buffer" )
-            if $DEBUG;
-        $ok = __PACKAGE__->_system_run( (ref $cmd ? "@$cmd" : $cmd), $verbose );
+        alarm 0;
+    };
+    
+    my $err = $?;
+    if ( $@ and ref $@ and $@->isa( ALARM_CLASS ) ) {
+        $ok  = 0;
+        $err = $@;  # the error code is an expired alarm
     }
     
     ### fill the buffer;
@@ -386,8 +417,8 @@ sub run {
     ### context, or just a simple 'ok' in scalar
     return wantarray
                 ? $have_buffer
-                    ? ($ok, $?, \@buffer, \@buff_out, \@buff_err)
-                    : ($ok, $? )
+                    ? ($ok, $err, \@buffer, \@buff_out, \@buff_err)
+                    : ($ok, $err )
                 : $ok
     
     
