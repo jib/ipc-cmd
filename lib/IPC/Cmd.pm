@@ -268,9 +268,10 @@ not.
 
 If the first element of the return value (success) was 0, then some
 error occurred. This second element is the error code the command
-you requested exited with, if available. If the error was a timeout,
-the C<errorcode> will be set to an object of the C<IPC::Cmd::TimeOut> 
-class.
+you requested exited with, if available. This is generally the value
+of C<$?>. See C<perldoc perlvar> for details on what C<$?> can contain.
+If the error was a timeout, the C<errorcode> will be set to an object 
+of the C<IPC::Cmd::TimeOut> class.
 
 =item full_buffer
 
