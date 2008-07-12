@@ -4,7 +4,7 @@ BEGIN { chdir 't' if -d 't' };
 
 use strict;
 use lib qw[../lib];
-use File::Spec ();
+use File::Spec;
 use Test::More 'no_plan';
 
 my $Class       = 'IPC::Cmd';
@@ -21,7 +21,11 @@ can_ok( __PACKAGE__,    $_ ) for @Funcs;
 my $Have_IPC_Run    = $Class->can_use_ipc_run;
 my $Have_IPC_Open3  = $Class->can_use_ipc_open3;
 
-$IPC::Cmd::VERBOSE  = $IPC::Cmd::VERBOSE = $Verbose;
+diag("Have IPC::Run? $Have_IPC_Run")     if $Verbose;
+diag("Have IPC::Open3? $Have_IPC_Open3") if $Verbose;
+
+local $IPC::Cmd::VERBOSE = $Verbose;
+local $IPC::Cmd::VERBOSE = $Verbose;
 
 ### run tests in various configurations, based on what modules we have
 my @Prefs = ( 
@@ -58,8 +62,10 @@ my @Prefs = (
         diag( "Running config: IPC::Run: $pref->[0] IPC::Open3: $pref->[1]" )
             if $Verbose;
 
-        $IPC::Cmd::USE_IPC_RUN    = $IPC::Cmd::USE_IPC_RUN      = $pref->[0];
-        $IPC::Cmd::USE_IPC_OPEN3  = $IPC::Cmd::USE_IPC_OPEN3    = $pref->[1];
+        local $IPC::Cmd::USE_IPC_RUN    = $pref->[0];
+        local $IPC::Cmd::USE_IPC_RUN    = $pref->[0];
+        local $IPC::Cmd::USE_IPC_OPEN3  = $pref->[1];
+        local $IPC::Cmd::USE_IPC_OPEN3  = $pref->[1];
 
         ### for each command
         for my $aref ( @$map ) {
@@ -90,6 +96,7 @@ my @Prefs = (
             ### in list mode                
             {   diag( "Running list mode" ) if $Verbose;
                 my @list = run( command => $cmd );
+
                 ok( $list[0],   "Command ran successfully" );
                 ok( !$list[1],  "   No error code set" );
 
@@ -117,14 +124,47 @@ my @Prefs = (
     }
 }
 
+### special call to check that output is interleaved properly
+{   my $cmd     = [$^X, File::Spec->catfile( qw[src output.pl] ) ];
+
+    ### for each configuarion
+    for my $pref ( @Prefs ) {
+        diag( "Running config: IPC::Run: $pref->[0] IPC::Open3: $pref->[1]" )
+            if $Verbose;
+
+        local $IPC::Cmd::USE_IPC_RUN    = $pref->[0];
+        local $IPC::Cmd::USE_IPC_RUN    = $pref->[0];
+        local $IPC::Cmd::USE_IPC_OPEN3  = $pref->[1];
+        local $IPC::Cmd::USE_IPC_OPEN3  = $pref->[1];
+
+        my @list    = run( command => $cmd, buffer => \my $buffer );
+        ok( $list[0],                   "Ran @{$cmd} successfully" );
+        ok( !$list[1],                  "   No errorcode set" );
+        SKIP: {
+            skip "No buffers available", 3 unless $Class->can_capture_buffer;
+
+            TODO: {
+                local $TODO = qq[Can't interleave input/output buffers yet];
+
+                is( "@{$list[2]}",'1 2 3 4',"   Combined output as expected" );
+                is( "@{$list[3]}", '1 3',   "   STDOUT as expected" );
+                is( "@{$list[4]}", '2 4',   "   STDERR as expected" );
+            
+            }
+        }
+    }        
+}
+
 ### test failures
 {   ### for each configuarion
     for my $pref ( @Prefs ) {
         diag( "Running config: IPC::Run: $pref->[0] IPC::Open3: $pref->[1]" )
             if $Verbose;
 
-        $IPC::Cmd::USE_IPC_RUN    = $IPC::Cmd::USE_IPC_RUN      = $pref->[0];
-        $IPC::Cmd::USE_IPC_OPEN3  = $IPC::Cmd::USE_IPC_OPEN3    = $pref->[1];
+        local $IPC::Cmd::USE_IPC_RUN    = $pref->[0];
+        local $IPC::Cmd::USE_IPC_RUN    = $pref->[0];
+        local $IPC::Cmd::USE_IPC_OPEN3  = $pref->[1];
+        local $IPC::Cmd::USE_IPC_OPEN3  = $pref->[1];
 
         my $ok = run( command => "$^X -edie" );
         ok( !$ok,               "Non-zero exit caught" );
@@ -137,8 +177,11 @@ my @Prefs = (
         diag( "Running config: IPC::Run: $pref->[0] IPC::Open3: $pref->[1]" )
             if $Verbose;
 
-        $IPC::Cmd::USE_IPC_RUN    = $IPC::Cmd::USE_IPC_RUN      = $pref->[0];
-        $IPC::Cmd::USE_IPC_OPEN3  = $IPC::Cmd::USE_IPC_OPEN3    = $pref->[1];
+        local $IPC::Cmd::USE_IPC_RUN    = $pref->[0];
+        local $IPC::Cmd::USE_IPC_RUN    = $pref->[0];
+        local $IPC::Cmd::USE_IPC_OPEN3  = $pref->[1];
+        local $IPC::Cmd::USE_IPC_OPEN3  = $pref->[1];
+
 
         my ($ok,$err) = run( command => "$^X -esleep+4", timeout => $timeout );
         ok( !$ok,               "Timeout caught" );

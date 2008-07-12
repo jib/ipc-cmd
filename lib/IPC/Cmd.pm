@@ -343,7 +343,7 @@ sub run {
     my $_out_handler = sub {
         my $buf = shift;
         return unless defined $buf;
-        
+       
         print STDOUT $buf if $verbose;
         push @buffer,   $buf;
         push @buff_out, $buf;
@@ -495,7 +495,7 @@ sub _open3_run {
                 warn(loc("Error reading from process: %1", $!));
                 last OUTER;
             }
-            
+
             ### check for $len. it may be 0, at which point we're
             ### done reading, so don't try to process it.
             ### if we would print anyway, we'd provide bogus information
@@ -807,6 +807,24 @@ Since this will lead to issues as described above.
 Currently it is too complicated to parse your command for IO
 Redirections. For capturing STDOUT or STDERR there is a work around
 however, since you can just inspect your buffers for the contents.
+
+=item Interleaving STDOUT/STDERR
+
+Neither IPC::Run nor IPC::Open3 can interleave STDOUT and STDERR. For short
+bursts of output from a program, ie this sample:
+
+    my $max = shift || 4;
+    for ( 1..$max ) {
+        $_ % 2 ? print STDOUT $_ : print STDERR $_;
+    }
+
+IPC::[Run|Open3] will first read all of STDOUT, then all of STDERR, meaning 
+the output looks like 1 line on each, namely '13' on STDOUT and '24' on STDERR.
+
+It should have been 1, 2, 3, 4.
+
+This has been recorded in L<rt.cpan.org> as bug #37532: Unable to interleave
+STDOUT and STDERR
 
 =back
 
