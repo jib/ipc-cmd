@@ -82,7 +82,7 @@ my @Prefs = (
                 my $buffer;
                 my $ok = run( command => $cmd, buffer => \$buffer );
 
-                ok( $ok,        "Ran command succesfully" );
+                ok( $ok,        "Ran '$pp_cmd' command succesfully" );
                 
                 SKIP: {
                     skip "No buffers available", 1 
@@ -186,7 +186,7 @@ my @Prefs = (
         my ($ok,$err) = run( command => "$^X -esleep+4", timeout => $timeout );
         ok( !$ok,               "Timeout caught" );
         ok( $err,               "   Error stored" );
-        isa_ok( $err, $AClass,  "   Error object" );
+        isa_ok( $err, $AClass,  "   Error object '$err'" );
     }
 }    
     

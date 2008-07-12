@@ -813,8 +813,7 @@ however, since you can just inspect your buffers for the contents.
 Neither IPC::Run nor IPC::Open3 can interleave STDOUT and STDERR. For short
 bursts of output from a program, ie this sample:
 
-    my $max = shift || 4;
-    for ( 1..$max ) {
+    for ( 1..4 ) {
         $_ % 2 ? print STDOUT $_ : print STDERR $_;
     }
 
