@@ -344,7 +344,8 @@ sub run {
     ### strip any empty elements from $cmd if present
     $cmd = [ grep { length && defined } @$cmd ] if ref $cmd;
 
-    print loc("Running [%1]...\n", (ref $cmd ? "@$cmd" : $cmd)) if $verbose;
+    my $pp_cmd = (ref $cmd ? "@$cmd" : $cmd);
+    print loc("Running [%1]...\n", $pp_cmd ) if $verbose;
 
     ### did the user pass us a buffer to fill or not? if so, set this
     ### flag so we know what is expected of us
@@ -385,10 +386,14 @@ sub run {
     ### dont look at previous errors:
     local $?;  
     local $@;
+    local $!;
 
     ### we might be having a timeout set
     eval {   
-        local $SIG{ALRM} = sub { die bless {}, ALARM_CLASS } if $timeout;
+        local $SIG{ALRM} = sub { die bless sub { 
+            ALARM_CLASS . 
+            qq[: Command '$pp_cmd' aborted by alarm after $timeout seconds]
+        }, ALARM_CLASS } if $timeout;
         alarm $timeout || 0;
     
         ### IPC::Run is first choice if $USE_IPC_RUN is set.
@@ -431,7 +436,7 @@ sub run {
     unless( $ok ) {
         ### alarm happened
         if ( $@ and ref $@ and $@->isa( ALARM_CLASS ) ) {
-            $err = $@;  # the error code is an expired alarm
+            $err = $@->();  # the error code is an expired alarm
 
         ### another error happened, set by the dispatch sub
         } else {
@@ -557,7 +562,7 @@ sub _open3_run {
     
     ### some error occurred
     if( $? ) {
-        $self->error( $? );   
+        $self->error( $self->_pp_child_error( $cmd, $? ) );   
         $self->ok( 0 );
         return;
     } else {
@@ -642,14 +647,31 @@ sub _ipc_run {
                             $_err_handler
                         )
                     };
+
+    ### all is well
     if( $ok ) {
-        return $self->ok( 1 );        
+        return $self->ok( $ok );
+
+    ### some error occurred
     } else {
-        $self->error( $@ ? $@ : $? );
         $self->ok( 0 );
+
+        ### if the eval fails due to an exception, deal with it
+        ### unless it's an alarm 
+        if( $@ and not UNIVERSAL::isa( $@, ALARM_CLASS ) ) {        
+            $self->error( $@ );
+
+        ### if it *is* an alarm, propagate        
+        } elsif( $@ ) {
+            die $@;
+
+        ### some error in the sub command
+        } else {
+            $self->error( $self->_pp_child_error( $cmd, $? ) );
+        }
+
         return;
-    };        
-        
+    }
 }
 
 sub _system_run { 
@@ -664,7 +686,7 @@ sub _system_run {
     ### system returns 'true' on failure -- the exit code of the cmd
     $self->ok( 1 );
     system( ref $cmd ? @$cmd : $cmd ) == 0 or do {
-        $self->error( $? );
+        $self->error( $self->_pp_child_error( $cmd, $? ) );
         $self->ok( 0 );
     };
 
@@ -756,6 +778,34 @@ sub _debug {
     return 1;
 }
 
+sub _pp_child_error {
+    my $self    = shift;
+    my $cmd     = shift or return;
+    my $ce      = shift or return;
+    my $pp_cmd  = ref $cmd ? "@$cmd" : $cmd;
+    
+            
+    my $str;
+    if( $ce == -1 ) {
+        ### Include $! in the error message, so that the user can
+        ### see 'No such file or directory' versus 'Permission denied'
+        ### versus 'Cannot fork' or whatever the cause was.
+        $str = "Failed to execute '$pp_cmd': $!";
+
+    } elsif ( $ce & 127 ) {       
+        ### some signal
+        $str = loc( "'%1' died with signal %d, %s coredump\n",
+               $pp_cmd, ($ce & 127), ($ce & 128) ? 'with' : 'without');
+
+    } else {
+        ### Otherwise, the command run but gave error status.
+        $str = "'$pp_cmd' exited with value " . ($ce >> 8);
+    }
+  
+    $self->_debug( "# Child error '$ce' translated to: $str" ) if $DEBUG;
+    
+    return $str;
+}
 
 1;
 

@@ -168,8 +168,11 @@ my @Prefs = (
         local $IPC::Cmd::USE_IPC_RUN    = $pref->[0];
         local $IPC::Cmd::USE_IPC_OPEN3  = $pref->[1];
 
-        my $ok = run( command => "$^X -edie" );
+$DB::single = 1 if $pref->[0];
+
+        my ($ok,$err) = run( command => "$^X -edie" );
         ok( !$ok,               "Non-zero exit caught" );
+        ok( $err,               "   Error '$err'" );
     }
 }   
 
@@ -186,7 +189,8 @@ my @Prefs = (
         my ($ok,$err) = run( command => "$^X -Xesleep+4", timeout => $timeout );
         ok( !$ok,               "Timeout caught" );
         ok( $err,               "   Error stored" );
-        isa_ok( $err, $AClass,  "   Error object '$err'" );
+        ok( not(ref($err)),     "   Error string is not a reference" );
+        like( $err,qr/^$AClass/,"   Error '$err' mentions $AClass" );
     }
 }    
     
