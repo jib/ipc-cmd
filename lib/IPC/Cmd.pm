@@ -264,14 +264,15 @@ In list context, you will be returned a list of the following items:
 A simple boolean indicating if the command executed without errors or
 not.
 
-=item errorcode
+=item error message
 
 If the first element of the return value (success) was 0, then some
-error occurred. This second element is the error code the command
-you requested exited with, if available. This is generally the value
-of C<$?>. See C<perldoc perlvar> for details on what C<$?> can contain.
-If the error was a timeout, the C<errorcode> will be set to an object 
-of the C<IPC::Cmd::TimeOut> class.
+error occurred. This second element is the error message the command
+you requested exited with, if available. This is generally a pretty 
+printed value of C<$?> or C<$@>. See C<perldoc perlvar> for details on 
+what they can contain.
+If the error was a timeout, the C<error message> will be prefixed with
+C<IPC::Cmd::TimeOut>, the timeout class.
 
 =item full_buffer
 
