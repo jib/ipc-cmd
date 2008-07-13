@@ -1,3 +1,16 @@
+Changes for 0.41_03 Sun Jul 13 14:59:44 CEST 2008
+=================================================
+* Address #36365: IPC::Cmd error reporting by adding extra
+  diagnostics on failure and pretty printing of errors
+* Fix the issue that caused many testers failures:
+  When _ipc_open3_run is interrupted by an alarm, the FDs were
+  not being restored, causing subsequent processes to not have
+  access to STDIN.
+* Add more diagnostics to 01.t
+* Add tests for interleaving stdout/stderr, which are now TODO
+  Record this as #37532: Unable to interleave STDOUT and STDERR
+  Mention this in the Caveats sections of the docs
+
 Changes for 0.41_02 Sun Jun 29 17:38:47 CEST 2008
 =================================================
 * Implement timeouts for commands (#36437)
