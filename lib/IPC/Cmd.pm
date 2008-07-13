@@ -14,7 +14,7 @@ BEGIN {
                         $USE_IPC_RUN $USE_IPC_OPEN3 $WARN
                     ];
 
-    $VERSION        = '0.41_02';
+    $VERSION        = '0.41_03';
     $VERBOSE        = 0;
     $DEBUG          = 0;
     $WARN           = 1;
@@ -304,7 +304,22 @@ what modules or function calls to use when issuing a command.
 
 =cut
 
+{   my @acc = qw[ok error _fds];
+    
+    ### autogenerate accessors ###
+    for my $key ( @acc ) {
+        no strict 'refs';
+        *{__PACKAGE__."::$key"} = sub {
+            $_[0]->{$key} = $_[1] if @_ > 1;
+            return $_[0]->{$key};
+        }
+    }
+}
+
 sub run {
+    ### container to store things in
+    my $self = bless {}, __PACKAGE__;
+
     my %hash = @_;
     
     ### if the user didn't provide a buffer, we'll store it here.
@@ -321,7 +336,8 @@ sub run {
     };
     
     unless( check( $tmpl, \%hash, $VERBOSE ) ) {
-        Carp::carp(loc("Could not validate input: %1", Params::Check->last_error));
+        Carp::carp( loc( "Could not validate input: %1",
+                         Params::Check->last_error ) );
         return;
     };        
 
@@ -361,54 +377,66 @@ sub run {
     
 
     ### flag to indicate we have a buffer captured
-    my $have_buffer = __PACKAGE__->can_capture_buffer ? 1 : 0;
+    my $have_buffer = $self->can_capture_buffer ? 1 : 0;
     
     ### flag indicating if the subcall went ok
     my $ok;
     
+    ### dont look at previous errors:
+    local $?;  
+    local $@;
+
     ### we might be having a timeout set
     eval {   
         local $SIG{ALRM} = sub { die bless {}, ALARM_CLASS } if $timeout;
         alarm $timeout || 0;
     
         ### IPC::Run is first choice if $USE_IPC_RUN is set.
-        if( $USE_IPC_RUN and __PACKAGE__->can_use_ipc_run( 1 ) ) {
+        if( $USE_IPC_RUN and $self->can_use_ipc_run( 1 ) ) {
             ### ipc::run handlers needs the command as a string or an array ref
     
-            __PACKAGE__->_debug( "# Using IPC::Run. Have buffer: $have_buffer" )
+            $self->_debug( "# Using IPC::Run. Have buffer: $have_buffer" )
                 if $DEBUG;
                 
-            $ok = __PACKAGE__->_ipc_run( $cmd, $_out_handler, $_err_handler );
+            $ok = $self->_ipc_run( $cmd, $_out_handler, $_err_handler );
     
         ### since IPC::Open3 works on all platforms, and just fails on
         ### win32 for capturing buffers, do that ideally
-        } elsif ( $USE_IPC_OPEN3 and __PACKAGE__->can_use_ipc_open3( 1 ) ) {
+        } elsif ( $USE_IPC_OPEN3 and $self->can_use_ipc_open3( 1 ) ) {
     
-            __PACKAGE__->_debug("# Using IPC::Open3. Have buffer: $have_buffer")
+            $self->_debug("# Using IPC::Open3. Have buffer: $have_buffer")
                 if $DEBUG;
     
             ### in case there are pipes in there;
             ### IPC::Open3 will call exec and exec will do the right thing 
-            $ok = __PACKAGE__->_open3_run( 
+            $ok = $self->_open3_run( 
                                     $cmd, $_out_handler, $_err_handler, $verbose 
                                 );
             
         ### if we are allowed to run verbose, just dispatch the system command
         } else {
-            __PACKAGE__->_debug( "# Using system(). Have buffer: $have_buffer" )
+            $self->_debug( "# Using system(). Have buffer: $have_buffer" )
                 if $DEBUG;
-            $ok = __PACKAGE__->_system_run( 
-                                    (ref $cmd ? "@$cmd" : $cmd), $verbose 
-                                );
+            $ok = $self->_system_run( $cmd, $verbose );
         }
         
         alarm 0;
     };
+   
+    ### restore STDIN after duping, or STDIN will be closed for
+    ### this current perl process!   
+    $self->__reopen_fds( @{ $self->_fds} ) if $self->_fds;
     
-    my $err = $?;
-    if ( $@ and ref $@ and $@->isa( ALARM_CLASS ) ) {
-        $ok  = 0;
-        $err = $@;  # the error code is an expired alarm
+    my $err;
+    unless( $ok ) {
+        ### alarm happened
+        if ( $@ and ref $@ and $@->isa( ALARM_CLASS ) ) {
+            $err = $@;  # the error code is an expired alarm
+
+        ### another error happened, set by the dispatch sub
+        } else {
+            $err = $self->error;
+        }
     }
     
     ### fill the buffer;
@@ -453,16 +481,26 @@ sub _open3_run {
                             ? qw[STDIN STDOUT STDERR] 
                             : qw[STDIN]
                         );
-    __PACKAGE__->__dup_fds( @fds_to_dup );
+    $self->_fds( \@fds_to_dup );
+    $self->__dup_fds( @fds_to_dup );
     
     ### dont stringify @$cmd, so spaces in filenames/paths are
     ### treated properly
-    my $pid = IPC::Open3::open3(
+    my $pid = eval { 
+        IPC::Open3::open3(
                     '<&STDIN',
                     (IS_WIN32 ? '>&STDOUT' : $kidout),
                     (IS_WIN32 ? '>&STDERR' : $kiderror),
                     ( ref $cmd ? @$cmd : $cmd ),
                 );
+    };
+    
+    ### open3 error occurred 
+    if( $@ and $@ =~ /^open3:/ ) {
+        $self->ok( 0 );
+        $self->error( $@ );
+        return;
+    };
 
     ### use OUR stdin, not $kidin. Somehow,
     ### we never get the input.. so jump through
@@ -514,10 +552,17 @@ sub _open3_run {
 
     ### restore STDIN after duping, or STDIN will be closed for
     ### this current perl process!
-    __PACKAGE__->__reopen_fds( @fds_to_dup );
+    ### done in the parent call now
+    # $self->__reopen_fds( @fds_to_dup );
     
-    return if $?;   # some error occurred
-    return 1;
+    ### some error occurred
+    if( $? ) {
+        $self->error( $? );   
+        $self->ok( 0 );
+        return;
+    } else {
+        return $self->ok( 1 );
+    }
 }
 
 
@@ -589,14 +634,22 @@ sub _ipc_run {
     #         push @command, \*STDIN;
     #     }
   
- 
     # \*STDIN is already included in the @command, see a few lines up
-    return IPC::Run::run(   @command, 
+    my $ok = eval { IPC::Run::run(   @command, 
                             fileno(STDOUT).'>',
                             $_out_handler,
                             fileno(STDERR).'>',
                             $_err_handler
-                        );
+                        )
+                    };
+    if( $ok ) {
+        return $self->ok( 1 );        
+    } else {
+        $self->error( $@ ? $@ : $? );
+        $self->ok( 0 );
+        return;
+    };        
+        
 }
 
 sub _system_run { 
@@ -605,15 +658,21 @@ sub _system_run {
     my $verbose = shift || 0;
 
     my @fds_to_dup = $verbose ? () : qw[STDOUT STDERR];
-    __PACKAGE__->__dup_fds( @fds_to_dup );
-    
+    $self->_fds( \@fds_to_dup );
+    $self->__dup_fds( @fds_to_dup );
+
     ### system returns 'true' on failure -- the exit code of the cmd
-    system( $cmd );
-    
-    __PACKAGE__->__reopen_fds( @fds_to_dup );
-    
-    return if $?;
-    return 1;
+    $self->ok( 1 );
+    system( ref $cmd ? @$cmd : $cmd ) == 0 or do {
+        $self->error( $? );
+        $self->ok( 0 );
+    };
+
+    ### done in the parent call now
+    #$self->__reopen_fds( @fds_to_dup );
+
+    return unless $self->ok;
+    return $self->ok;
 }
 
 {   use File::Spec;
