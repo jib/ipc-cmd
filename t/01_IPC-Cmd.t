@@ -168,8 +168,6 @@ my @Prefs = (
         local $IPC::Cmd::USE_IPC_RUN    = $pref->[0];
         local $IPC::Cmd::USE_IPC_OPEN3  = $pref->[1];
 
-$DB::single = 1 if $pref->[0];
-
         my ($ok,$err) = run( command => "$^X -edie" );
         ok( !$ok,               "Non-zero exit caught" );
         ok( $err,               "   Error '$err'" );

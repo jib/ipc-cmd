@@ -272,7 +272,7 @@ you requested exited with, if available. This is generally a pretty
 printed value of C<$?> or C<$@>. See C<perldoc perlvar> for details on 
 what they can contain.
 If the error was a timeout, the C<error message> will be prefixed with
-C<IPC::Cmd::TimeOut>, the timeout class.
+the string C<IPC::Cmd::TimeOut>, the timeout class.
 
 =item full_buffer
 
