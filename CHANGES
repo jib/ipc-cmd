@@ -1,3 +1,8 @@
+Changes for 0.41_04 Mon Jul 14 15:54:57 CEST 2008
+=================================================
+* Forgot to add new test file. Users of 0.41_03 
+  need not to upgrade.
+
 Changes for 0.41_03 Sun Jul 13 14:59:44 CEST 2008
 =================================================
 * Address #36365: IPC::Cmd error reporting by adding extra
