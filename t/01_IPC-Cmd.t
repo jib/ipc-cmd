@@ -33,10 +33,10 @@ local $IPC::Cmd::DEBUG   = $Verbose;
 ### run tests in various configurations, based on what modules we have
 my @Prefs = ( 
     [ $Have_IPC_Run, $Have_IPC_Open3 ], 
-    [ 0,             $Have_IPC_Open3 ],     # run this config twice to ensure
-    [ 0,             $Have_IPC_Open3 ],     # FD restores work properly
-    [ 0,             0 ], 
-    [ 0,             0 ],     
+#     [ 0,             $Have_IPC_Open3 ],     # run this config twice to ensure
+#     [ 0,             $Have_IPC_Open3 ],     # FD restores work properly
+#     [ 0,             0 ], 
+#     [ 0,             0 ],     
 );
 
 
@@ -53,15 +53,28 @@ my @Prefs = (
         ### run tests that print only to stdout
         [ "$^X -v",                                  qr/larry\s+wall/i, 3, ],
         [ [$^X, '-v'],                               qr/larry\s+wall/i, 3, ],
-        [ "$^X -eprint+42 | $^X -neprint",           qr/42/,            3, ],
-        [ [$^X,qw[-eprint+42 |], $^X, qw|-neprint|], qr/42/,            3, ],
+        [ "$^X -eprint+424 | $^X -neprint+split+2",  qr/44/,            3, ],
+        [ [$^X,qw[-eprint+424 |], $^X, qw|-neprint+split+2|], 
+                                                     qr/44/,            3, ],
         [ [$^X, '-eprint+shift', q|a b|],            qr/a b/,           3, ],
         [ "$^X -eprint+shift 'a b'",                 qr/a b/,           3, ],
         
         ### run tests that print only to stderr
         [ "$^X -ewarn+42",                           qr/^42 /,          4, ],
-        [ [$^X, '-ewarn+42'],                        qr/^42 /,          4, ],        
+        [ [$^X, '-ewarn+42'],                        qr/^42 /,          4, ],
     ];
+
+    ### extended test
+    ### test if gzip | tar works
+    {   my $gzip = can_run('gzip');
+        my $tar  = can_run('tar');
+        
+        if( $gzip and $tar ) {
+            push @$map,
+                [ [$gzip, qw[-cdf src/x.tgz |], $tar, qw[-tf -]],     
+                                                       qr/a/,             3, ];
+        }
+    }        
 
     ### for each configuarion
     for my $pref ( @Prefs ) {
@@ -93,7 +106,7 @@ my @Prefs = (
                                 unless $Class->can_capture_buffer;
                     
                     like( $buffer, $regex,  
-                                "   Buffer filled properly" );
+                                "   Buffer matches $regex" );
                 }
             }
                 
@@ -116,10 +129,10 @@ my @Prefs = (
                     isa_ok( $list[$_], 'ARRAY' ) for 2..4;
 
                     like( "@{$list[2]}", $regex,
-                                "   Combined buffer holds output" );
+                                "   Combined matches $regex" );
 
                     like( "@{$list[$index]}", qr/$regex/,
-                            "   Proper buffer filled" );
+                            "   Proper buffer($index) matches $regex" );
                     is( scalar( @{$list[ $index==3 ? 4 : 3 ]} ), 0,
                                     "   Other buffer empty" );
                 }
@@ -127,7 +140,7 @@ my @Prefs = (
         }
     }
 }
-
+__END__
 ### special call to check that output is interleaved properly
 {   my $cmd     = [$^X, File::Spec->catfile( qw[src output.pl] ) ];
 

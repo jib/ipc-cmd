@@ -4,10 +4,11 @@ use strict;
 
 BEGIN {
 
-    use constant IS_VMS      => $^O eq 'VMS'                       ? 1 : 0;    
-    use constant IS_WIN32    => $^O eq 'MSWin32'                   ? 1 : 0;
-    use constant IS_WIN98    => (IS_WIN32 and !Win32::IsWinNT())   ? 1 : 0;
-    use constant ALARM_CLASS => __PACKAGE__ . '::TimeOut';
+    use constant IS_VMS         => $^O eq 'VMS'                       ? 1 : 0;    
+    use constant IS_WIN32       => $^O eq 'MSWin32'                   ? 1 : 0;
+    use constant IS_WIN98       => (IS_WIN32 and !Win32::IsWinNT())   ? 1 : 0;
+    use constant ALARM_CLASS    => __PACKAGE__ . '::TimeOut';
+    use constant SPECIAL_CHARS  => qw[< > | &];
 
     use Exporter    ();
     use vars        qw[ @ISA $VERSION @EXPORT_OK $VERBOSE $DEBUG
@@ -598,11 +599,14 @@ sub _ipc_run {
     # ]
 
     
-    my @command; my $special_chars;
+    my @command; 
+    my $special_chars;
+    
+    my $re = do { my $x = join '', SPECIAL_CHARS; qr/([$x])/ };
     if( ref $cmd ) {
         my $aref = [];
         for my $item (@$cmd) {
-            if( $item =~ /([<>|&])/ ) {
+            if( $item =~ $re ) {
                 push @command, $aref, $item;
                 $aref = [];
                 $special_chars .= $1;
@@ -612,13 +616,13 @@ sub _ipc_run {
         }
         push @command, $aref;
     } else {
-        @command = map { if( /([<>|&])/ ) {
+        @command = map { if( $_ =~ $re ) {
                             $special_chars .= $1; $_;
                          } else {
 #                            [ split / +/ ]
-                             [ map { m/\ / ? qq{'$_'} : $_ } shellwords($cmd) ]
+                             [ map { m/\ / ? qq{'$_'} : $_ } shellwords($_) ]
                          }
-                    } split( /\s*([<>|&])\s*/, $cmd );
+                    } split( /\s*$re\s*/, $cmd );
     }
  
     ### if there's a pipe in the command, *STDIN needs to 
