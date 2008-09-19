@@ -920,11 +920,27 @@ Defaults to true. Turn this off at your own risk.
 
 =over 4
 
-=item Whitespace
+=item Whitespace and IPC::Open3 / system()
 
-When you provide a string as this argument, the string will be
-split on whitespace to determine the individual elements of your
-command. Although this will usually just Do What You Mean, it may
+When using C<IPC::Open3> or C<system>, if you provide a string as the
+C<command> argument, it is assumed to be appropriately escaped. However,
+if you provide and C<Array Reference>, special rules apply:
+
+If your command contains C<Special Characters> (< > | &), it will
+be internally stringified before executing the command, to avoid that these
+special characters are escaped and passed as arguments instead of retaining
+their special meaning.
+
+However, if the command contained arguments that contained whitespace, 
+stringifying the command would loose the significance of the whitespace.
+Therefor, C<IPC::Cmd> will quote any arguments containing whitespace in your
+command if the command is passed as an arrayref and contains special characters.
+
+=item Whitespace and IPC::Run
+
+When using C<IPC::Run>, if you provide a string as the C<command> argument, 
+the string will be split on whitespace to determine the individual elements 
+of your command. Although this will usually just Do What You Mean, it may
 break if you have files or commands with whitespace in them.
 
 If you do not wish this to happen, you should provide an array
@@ -951,6 +967,7 @@ But take care not to pass it as, for example
     ['gzip -cdf foo.tar.gz', '|', 'tar -xf -']
 
 Since this will lead to issues as described above.
+
 
 =item IO Redirect
 
