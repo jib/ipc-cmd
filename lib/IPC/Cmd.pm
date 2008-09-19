@@ -9,6 +9,7 @@ BEGIN {
     use constant IS_WIN98       => (IS_WIN32 and !Win32::IsWinNT())   ? 1 : 0;
     use constant ALARM_CLASS    => __PACKAGE__ . '::TimeOut';
     use constant SPECIAL_CHARS  => qw[< > | &];
+    use constant QUOTE          => do { $^O eq 'MSWin32' ? q["] : q['] };            
 
     use Exporter    ();
     use vars        qw[ @ISA $VERSION @EXPORT_OK $VERBOSE $DEBUG
@@ -491,6 +492,10 @@ sub _open3_run {
     $self->_fds( \@fds_to_dup );
     $self->__dup_fds( @fds_to_dup );
     
+    ### pipes have to come in a quoted string, and that clashes with
+    ### whitespace. This sub fixes up such commands so they run properly
+    $cmd = $self->__fix_cmd_whitespace_and_special_chars( $cmd );
+        
     ### dont stringify @$cmd, so spaces in filenames/paths are
     ### treated properly
     my $pid = eval { 
@@ -684,6 +689,10 @@ sub _system_run {
     my $cmd     = shift;
     my $verbose = shift || 0;
 
+    ### pipes have to come in a quoted string, and that clashes with
+    ### whitespace. This sub fixes up such commands so they run properly
+    $cmd = $self->__fix_cmd_whitespace_and_special_chars( $cmd );
+
     my @fds_to_dup = $verbose ? () : qw[STDOUT STDERR];
     $self->_fds( \@fds_to_dup );
     $self->__dup_fds( @fds_to_dup );
@@ -700,6 +709,33 @@ sub _system_run {
 
     return unless $self->ok;
     return $self->ok;
+}
+
+{   my %sc_lookup = map { $_ => $_ } SPECIAL_CHARS;
+
+
+    sub __fix_cmd_whitespace_and_special_chars {
+        my $self = shift;
+        my $cmd  = shift;
+
+        ### command has a special char in it
+        if( ref $cmd and grep { $sc_lookup{$_} } @$cmd ) {
+            
+            ### since we have special chars, we have to quote white space
+            ### this *may* conflict with the parsing :(
+            my $fixed;
+            my @cmd = map { / / ? do { $fixed++; QUOTE.$_.QUOTE } : $_ } @$cmd;
+            
+            $self->_debug( "# Quoted $fixed arguments containing whitespace" )
+                    if $DEBUG && $fixed;
+            
+            ### stringify it, so the special char isn't escaped as argument
+            ### to the program
+            $cmd = join ' ', @cmd;
+        }
+
+        return $cmd;
+    }
 }
 
 {   use File::Spec;

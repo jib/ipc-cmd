@@ -33,10 +33,10 @@ local $IPC::Cmd::DEBUG   = $Verbose;
 ### run tests in various configurations, based on what modules we have
 my @Prefs = ( 
     [ $Have_IPC_Run, $Have_IPC_Open3 ], 
-#     [ 0,             $Have_IPC_Open3 ],     # run this config twice to ensure
-#     [ 0,             $Have_IPC_Open3 ],     # FD restores work properly
-#     [ 0,             0 ], 
-#     [ 0,             0 ],     
+    [ 0,             $Have_IPC_Open3 ],     # run this config twice to ensure
+    [ 0,             $Have_IPC_Open3 ],     # FD restores work properly
+    [ 0,             0 ], 
+    [ 0,             0 ],     
 );
 
 
@@ -53,12 +53,21 @@ my @Prefs = (
         ### run tests that print only to stdout
         [ "$^X -v",                                  qr/larry\s+wall/i, 3, ],
         [ [$^X, '-v'],                               qr/larry\s+wall/i, 3, ],
+
+        ### pipes
         [ "$^X -eprint+424 | $^X -neprint+split+2",  qr/44/,            3, ],
         [ [$^X,qw[-eprint+424 |], $^X, qw|-neprint+split+2|], 
                                                      qr/44/,            3, ],
-        [ [$^X, '-eprint+shift', q|a b|],            qr/a b/,           3, ],
-        [ "$^X -eprint+shift 'a b'",                 qr/a b/,           3, ],
-        
+        ### whitespace
+        [ [$^X, '-eprint+shift', q|a b a|],          qr/a b a/,         3, ],
+        [ "$^X -eprint+shift 'a b a'",               qr/a b a/,         3, ],
+
+        ### whitespace + pipe
+        [ [$^X, '-eprint+shift', q|a b a|, q[|], $^X, qw[-neprint+split+b] ],
+                                                     qr/a  a/,          3, ],
+        [ "$^X -eprint+shift 'a b a' | $^X -neprint+split+b",
+                                                     qr/a  a/,          3, ],
+
         ### run tests that print only to stderr
         [ "$^X -ewarn+42",                           qr/^42 /,          4, ],
         [ [$^X, '-ewarn+42'],                        qr/^42 /,          4, ],
