@@ -1,3 +1,17 @@
+Changes for 0.41_05 Mon Sep 22 14:22:45 CEST 2008
+=================================================
+* Address whitespace issues in commands: if the full command 
+  contains special chars (ie, <,>,|,&) it needs to be stringified 
+  for system() and ipc::open3 or the special chars are escaped
+  as arguments to the command. So, if you pass an arrayref as
+  command, we'll stringify it.
+  Of course that conflicts with arguments containing whitespace, 
+  so if we need to stringify we'll also attempt to fixup any 
+  arguments that have whitespace with the OS specific quote.
+* Added tests for pipes, whitespace and pipes + whitespace to make
+  sure our fix works
+* Documentation on whitespace updated accordingly.
+
 Changes for 0.41_04 Mon Jul 14 15:54:57 CEST 2008
 =================================================
 * Forgot to add new test file. Users of 0.41_03 

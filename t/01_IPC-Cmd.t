@@ -91,6 +91,8 @@ my @Prefs = (
             if $Verbose;
 
         local $IPC::Cmd::USE_IPC_RUN    = $pref->[0];
+        local $IPC::Cmd::USE_IPC_RUN    = $pref->[0];
+        local $IPC::Cmd::USE_IPC_OPEN3  = $pref->[1];
         local $IPC::Cmd::USE_IPC_OPEN3  = $pref->[1];
 
         ### for each command
