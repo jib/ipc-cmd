@@ -73,15 +73,16 @@ my @Prefs = (
         [ [$^X, '-ewarn+42'],                        qr/^42 /,          4, ],
     ];
 
-    ### extended test
+    ### extended test in developer mode
     ### test if gzip | tar works
-    {   my $gzip = can_run('gzip');
+    if( $Verbose ) {   
+        my $gzip = can_run('gzip');
         my $tar  = can_run('tar');
         
         if( $gzip and $tar ) {
             push @$map,
                 [ [$gzip, qw[-cdf src/x.tgz |], $tar, qw[-tf -]],     
-                                                       qr/a/,             3, ];
+                                                       qr/a/,           3, ];
         }
     }        
 
