@@ -1,3 +1,8 @@
+Changes for 0.41_06 Wed Sep 24 17:03:14 CEST 2008
+=================================================
+* Add missing source file for tests. Users of 0.41_05
+  need not upgrade.
+
 Changes for 0.41_05 Mon Sep 22 14:22:45 CEST 2008
 =================================================
 * Address whitespace issues in commands: if the full command 
