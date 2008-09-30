@@ -91,7 +91,7 @@ as adhere to your verbosity settings.
 
 =head1 CLASS METHODS 
 
-=head2 $bool = IPC::Cmd->can_use_ipc_run( [VERBOSE] )
+=head2 $ipc_run_version = IPC::Cmd->can_use_ipc_run( [VERBOSE] )
 
 Utility function that tells you if C<IPC::Run> is available. 
 If the verbose flag is passed, it will print diagnostic messages
@@ -114,10 +114,10 @@ sub can_use_ipc_run     {
                     );
                     
     ### otherwise, we're good to go
-    return 1;                    
+    return $IPC::Run::VERSION;                    
 }
 
-=head2 $bool = IPC::Cmd->can_use_ipc_open3( [VERBOSE] )
+=head2 $ipc_open3_version = IPC::Cmd->can_use_ipc_open3( [VERBOSE] )
 
 Utility function that tells you if C<IPC::Open3> is available. 
 If the verbose flag is passed, it will print diagnostic messages
@@ -141,7 +141,7 @@ sub can_use_ipc_open3   {
         verbose => ($WARN && $verbose),
     );
     
-    return 1;
+    return $IPC::Open3::VERSION;
 }
 
 =head2 $bool = IPC::Cmd->can_capture_buffer

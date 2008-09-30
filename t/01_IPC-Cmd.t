@@ -21,8 +21,7 @@ can_ok( __PACKAGE__,    $_ ) for @Funcs;
 my $Have_IPC_Run    = $Class->can_use_ipc_run;
 my $Have_IPC_Open3  = $Class->can_use_ipc_open3;
 
-diag("Have IPC::Run? $Have_IPC_Run")     if $Verbose;
-diag("Have IPC::Open3? $Have_IPC_Open3") if $Verbose;
+diag("IPC::Run: $Have_IPC_Run   IPC::Open3: $Have_IPC_Open3");    
 
 local $IPC::Cmd::VERBOSE = $Verbose;
 local $IPC::Cmd::VERBOSE = $Verbose;
@@ -31,13 +30,16 @@ local $IPC::Cmd::DEBUG   = $Verbose;
 
 
 ### run tests in various configurations, based on what modules we have
-my @Prefs = ( 
-    [ $Have_IPC_Run, $Have_IPC_Open3 ], 
-    [ 0,             $Have_IPC_Open3 ],     # run this config twice to ensure
-    [ 0,             $Have_IPC_Open3 ],     # FD restores work properly
-    [ 0,             0 ], 
-    [ 0,             0 ],     
-);
+my @Prefs = ( );
+push @Prefs, [ $Have_IPC_Run, $Have_IPC_Open3 ] if $Have_IPC_Run; 
+
+### run this config twice to ensure FD restores work properly
+push @Prefs, [ 0,             $Have_IPC_Open3 ],     
+             [ 0,             $Have_IPC_Open3 ] if $Have_IPC_Open3;
+
+### run this config twice to ensure FD restores work properly
+### these are the system() tests;
+push @Prefs, [ 0,             0 ],  [ 0,             0 ];     
 
 
 ### can_run tests
@@ -88,13 +90,11 @@ my @Prefs = (
 
     ### for each configuarion
     for my $pref ( @Prefs ) {
-        diag( "Running config: IPC::Run: $pref->[0] IPC::Open3: $pref->[1]" )
-            if $Verbose;
 
-        local $IPC::Cmd::USE_IPC_RUN    = $pref->[0];
-        local $IPC::Cmd::USE_IPC_RUN    = $pref->[0];
-        local $IPC::Cmd::USE_IPC_OPEN3  = $pref->[1];
-        local $IPC::Cmd::USE_IPC_OPEN3  = $pref->[1];
+        local $IPC::Cmd::USE_IPC_RUN    = !!$pref->[0];
+        local $IPC::Cmd::USE_IPC_RUN    = !!$pref->[0];
+        local $IPC::Cmd::USE_IPC_OPEN3  = !!$pref->[1];
+        local $IPC::Cmd::USE_IPC_OPEN3  = !!$pref->[1];
 
         ### for each command
         for my $aref ( @$map ) {
@@ -102,13 +102,13 @@ my @Prefs = (
             my $regex  = $aref->[1];
             my $index  = $aref->[2];
 
-            my $pp_cmd = ref $cmd ? "@$cmd" : "$cmd";
-            diag( "Running '$pp_cmd' as " . (ref $cmd ? "ARRAY" : "SCALAR") ) 
-                if $Verbose;
+            my $pp_cmd = ref $cmd ? "Array: @$cmd" : "Scalar: $cmd";
+            $pp_cmd .= " (IPC::Run: $pref->[0] IPC::Open3: $pref->[1])";
+
+            diag( "Running '$pp_cmd'") if $Verbose;
 
             ### in scalar mode
-            {   diag( "Running scalar mode" ) if $Verbose;
-                my $buffer;
+            {   my $buffer;
                 my $ok = run( command => $cmd, buffer => \$buffer );
 
                 ok( $ok,        "Ran '$pp_cmd' command succesfully" );
@@ -118,7 +118,7 @@ my @Prefs = (
                                 unless $Class->can_capture_buffer;
                     
                     like( $buffer, $regex,  
-                                "   Buffer matches $regex" );
+                                "   Buffer matches $regex -- ($pp_cmd)" );
                 }
             }
                 
@@ -126,12 +126,12 @@ my @Prefs = (
             {   diag( "Running list mode" ) if $Verbose;
                 my @list = run( command => $cmd );
 
-                ok( $list[0],   "Command ran successfully" );
-                ok( !$list[1],  "   No error code set" );
+                ok( $list[0],   "Ran '$pp_cmd' successfully" );
+                ok( !$list[1],  "   No error code set -- ($pp_cmd)" );
 
                 my $list_length = $Class->can_capture_buffer ? 5 : 2;
                 is( scalar(@list), $list_length,
-                                "   Output list has $list_length entries" );
+                                "   Output list has $list_length entries -- ($pp_cmd)" );
 
                 SKIP: {
                     skip "No buffers available", 6 
@@ -141,12 +141,12 @@ my @Prefs = (
                     isa_ok( $list[$_], 'ARRAY' ) for 2..4;
 
                     like( "@{$list[2]}", $regex,
-                                "   Combined matches $regex" );
+                                "   Combined buffer matches $regex -- ($pp_cmd)" );
 
                     like( "@{$list[$index]}", qr/$regex/,
-                            "   Proper buffer($index) matches $regex" );
+                            "   Proper buffer($index) matches $regex -- ($pp_cmd)" );
                     is( scalar( @{$list[ $index==3 ? 4 : 3 ]} ), 0,
-                                    "   Other buffer empty" );
+                                    "   Other buffer empty -- ($pp_cmd)" );
                 }
             }
         }
