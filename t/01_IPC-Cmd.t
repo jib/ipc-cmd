@@ -9,7 +9,7 @@ use Test::More 'no_plan';
 
 my $Class       = 'IPC::Cmd';
 my $AClass      = $Class . '::TimeOut';
-my @Funcs       = qw[run can_run];
+my @Funcs       = qw[run can_run QUOTE];
 my @Meths       = qw[can_use_ipc_run can_use_ipc_open3 can_capture_buffer];
 my $IsWin32     = $^O eq 'MSWin32';
 my $Verbose     = @ARGV ? 1 : 0;
@@ -48,7 +48,9 @@ push @Prefs, [ 0,             0 ],  [ 0,             0 ];
     ok( !can_run('10283lkjfdalskfjaf'), q[Not found non-existant binary] );
 }
 
-{   ### list of commands and regexes matching output ###
+{   ### list of commands and regexes matching output 
+    ### XXX use " everywhere when using literal strings as commands for
+    ### portability, especially on win32
     my $map = [
         # command                                    # output regex     # buffer
 
@@ -62,12 +64,12 @@ push @Prefs, [ 0,             0 ],  [ 0,             0 ];
                                                      qr/44/,            3, ],
         ### whitespace
         [ [$^X, '-eprint+shift', q|a b a|],          qr/a b a/,         3, ],
-        [ "$^X -eprint+shift 'a b a'",               qr/a b a/,         3, ],
+        [ qq[$^X -eprint+shift "a b a"],             qr/a b a/,         3, ],
 
         ### whitespace + pipe
         [ [$^X, '-eprint+shift', q|a b a|, q[|], $^X, qw[-neprint+split+b] ],
                                                      qr/a  a/,          3, ],
-        [ "$^X -eprint+shift 'a b a' | $^X -neprint+split+b",
+        [ qq[$^X -eprint+shift "a b a" | $^X -neprint+split+b],
                                                      qr/a  a/,          3, ],
 
         ### run tests that print only to stderr

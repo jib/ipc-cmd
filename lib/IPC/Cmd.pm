@@ -9,7 +9,7 @@ BEGIN {
     use constant IS_WIN98       => (IS_WIN32 and !Win32::IsWinNT())   ? 1 : 0;
     use constant ALARM_CLASS    => __PACKAGE__ . '::TimeOut';
     use constant SPECIAL_CHARS  => qw[< > | &];
-    use constant QUOTE          => do { $^O eq 'MSWin32' ? q["] : q['] };            
+    use constant QUOTE          => do { IS_WIN32 ? q["] : q['] };            
 
     use Exporter    ();
     use vars        qw[ @ISA $VERSION @EXPORT_OK $VERBOSE $DEBUG
@@ -24,7 +24,7 @@ BEGIN {
     $USE_IPC_OPEN3  = not IS_VMS;
 
     @ISA            = qw[Exporter];
-    @EXPORT_OK      = qw[can_run run];
+    @EXPORT_OK      = qw[can_run run QUOTE];
 }
 
 require Carp;
@@ -78,6 +78,7 @@ IPC::Cmd - finding and running system commands made easy
     ### don't have IPC::Cmd be verbose, ie don't print to stdout or
     ### stderr when running commands -- default is '0'
     $IPC::Cmd::VERBOSE = 0;
+         
 
 =head1 DESCRIPTION
 
@@ -850,6 +851,19 @@ sub _pp_child_error {
 
 1;
 
+=head2 $q = QUOTE
+
+Returns the character used for quoting strings on this platform. This is
+usually a C<'> (single quote) on most systems, but some systems use different
+quotes. For example, C<Win32> uses C<"> (double quote). 
+
+You can use it as follows:
+
+  use IPC::Cmd qw[run QUOTE];
+  my $cmd = q[echo ] . QUOTE . q[foo bar] . QUOTE;
+
+This makes sure that C<foo bar> is treated as a string, rather than two
+seperate arguments to the C<echo> function.
 
 __END__
 
@@ -923,8 +937,9 @@ Defaults to true. Turn this off at your own risk.
 =item Whitespace and IPC::Open3 / system()
 
 When using C<IPC::Open3> or C<system>, if you provide a string as the
-C<command> argument, it is assumed to be appropriately escaped. However,
-if you provide and C<Array Reference>, special rules apply:
+C<command> argument, it is assumed to be appropriately escaped. You can
+use the C<QUOTE> constant to use as a portable quote character (see above).
+However, if you provide and C<Array Reference>, special rules apply:
 
 If your command contains C<Special Characters> (< > | &), it will
 be internally stringified before executing the command, to avoid that these
