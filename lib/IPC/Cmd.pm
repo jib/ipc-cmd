@@ -30,7 +30,7 @@ BEGIN {
 require Carp;
 use File::Spec;
 use Params::Check               qw[check];
-use Text::ParseWords            qw[shellwords];
+use Text::ParseWords            ();             # import ONLY if needed!
 use Module::Load::Conditional   qw[can_load];
 use Locale::Maketext::Simple    Style => 'gettext';
 
@@ -442,7 +442,7 @@ sub run {
         if ( $@ and ref $@ and $@->isa( ALARM_CLASS ) ) {
             $err = $@->();  # the error code is an expired alarm
 
-        ### another error happened, set by the dispatch sub
+        ### another error happened, set by the dispatchub
         } else {
             $err = $self->error;
         }
@@ -578,110 +578,116 @@ sub _open3_run {
     }
 }
 
+### text::parsewords::shellwordss() uses unix semantics. that will break
+### on win32
+{   my $parse_sub = IS_WIN32 
+                        ? __PACKAGE__->can('_split_like_shell_win32')
+                        : Text::ParseWords->can('shellwords');
 
-sub _ipc_run {  
-    my $self            = shift;
-    my $cmd             = shift;
-    my $_out_handler    = shift;
-    my $_err_handler    = shift;
-    
-    STDOUT->autoflush(1); STDERR->autoflush(1);
+    sub _ipc_run {  
+        my $self            = shift;
+        my $cmd             = shift;
+        my $_out_handler    = shift;
+        my $_err_handler    = shift;
+        
+        STDOUT->autoflush(1); STDERR->autoflush(1);
 
-    ### a command like:
-    # [
-    #     '/usr/bin/gzip',
-    #     '-cdf',
-    #     '/Users/kane/sources/p4/other/archive-extract/t/src/x.tgz',
-    #     '|',
-    #     '/usr/bin/tar',
-    #     '-tf -'
-    # ]
-    ### needs to become:
-    # [
-    #     ['/usr/bin/gzip', '-cdf',
-    #       '/Users/kane/sources/p4/other/archive-extract/t/src/x.tgz']
-    #     '|',
-    #     ['/usr/bin/tar', '-tf -']
-    # ]
+        ### a command like:
+        # [
+        #     '/usr/bin/gzip',
+        #     '-cdf',
+        #     '/Users/kane/sources/p4/other/archive-extract/t/src/x.tgz',
+        #     '|',
+        #     '/usr/bin/tar',
+        #     '-tf -'
+        # ]
+        ### needs to become:
+        # [
+        #     ['/usr/bin/gzip', '-cdf',
+        #       '/Users/kane/sources/p4/other/archive-extract/t/src/x.tgz']
+        #     '|',
+        #     ['/usr/bin/tar', '-tf -']
+        # ]
 
     
-    my @command; 
-    my $special_chars;
+        my @command; 
+        my $special_chars;
     
-    my $re = do { my $x = join '', SPECIAL_CHARS; qr/([$x])/ };
-    if( ref $cmd ) {
-        my $aref = [];
-        for my $item (@$cmd) {
-            if( $item =~ $re ) {
-                push @command, $aref, $item;
-                $aref = [];
-                $special_chars .= $1;
-            } else {
-                push @$aref, $item;
+        my $re = do { my $x = join '', SPECIAL_CHARS; qr/([$x])/ };
+        if( ref $cmd ) {
+            my $aref = [];
+            for my $item (@$cmd) {
+                if( $item =~ $re ) {
+                    push @command, $aref, $item;
+                    $aref = [];
+                    $special_chars .= $1;
+                } else {
+                    push @$aref, $item;
+                }
             }
-        }
-        push @command, $aref;
-    } else {
-        @command = map { if( $_ =~ $re ) {
-                            $special_chars .= $1; $_;
-                         } else {
-#                            [ split / +/ ]
-                             [ map { m/\ / ? qq{'$_'} : $_ } shellwords($_) ]
-                         }
-                    } split( /\s*$re\s*/, $cmd );
-    }
- 
-    ### if there's a pipe in the command, *STDIN needs to 
-    ### be inserted *BEFORE* the pipe, to work on win32
-    ### this also works on *nix, so we should do it when possible
-    ### this should *also* work on multiple pipes in the command
-    ### if there's no pipe in the command, append STDIN to the back
-    ### of the command instead.
-    ### XXX seems IPC::Run works it out for itself if you just
-    ### dont pass STDIN at all.
-    #     if( $special_chars and $special_chars =~ /\|/ ) {
-    #         ### only add STDIN the first time..
-    #         my $i;
-    #         @command = map { ($_ eq '|' && not $i++) 
-    #                             ? ( \*STDIN, $_ ) 
-    #                             : $_ 
-    #                         } @command; 
-    #     } else {
-    #         push @command, \*STDIN;
-    #     }
-  
-    # \*STDIN is already included in the @command, see a few lines up
-    my $ok = eval { IPC::Run::run(   @command, 
-                            fileno(STDOUT).'>',
-                            $_out_handler,
-                            fileno(STDERR).'>',
-                            $_err_handler
-                        )
-                    };
-
-    ### all is well
-    if( $ok ) {
-        return $self->ok( $ok );
-
-    ### some error occurred
-    } else {
-        $self->ok( 0 );
-
-        ### if the eval fails due to an exception, deal with it
-        ### unless it's an alarm 
-        if( $@ and not UNIVERSAL::isa( $@, ALARM_CLASS ) ) {        
-            $self->error( $@ );
-
-        ### if it *is* an alarm, propagate        
-        } elsif( $@ ) {
-            die $@;
-
-        ### some error in the sub command
+            push @command, $aref;
         } else {
-            $self->error( $self->_pp_child_error( $cmd, $? ) );
+            @command = map { if( $_ =~ $re ) {
+                                $special_chars .= $1; $_;
+                             } else {
+#                                [ split /\s+/ ]
+                                 [ map { m/[ ]/ ? qq{'$_'} : $_ } $parse_sub->($_) ]
+                             }
+                        } split( /\s*$re\s*/, $cmd );
         }
 
-        return;
+        ### if there's a pipe in the command, *STDIN needs to 
+        ### be inserted *BEFORE* the pipe, to work on win32
+        ### this also works on *nix, so we should do it when possible
+        ### this should *also* work on multiple pipes in the command
+        ### if there's no pipe in the command, append STDIN to the back
+        ### of the command instead.
+        ### XXX seems IPC::Run works it out for itself if you just
+        ### dont pass STDIN at all.
+        #     if( $special_chars and $special_chars =~ /\|/ ) {
+        #         ### only add STDIN the first time..
+        #         my $i;
+        #         @command = map { ($_ eq '|' && not $i++) 
+        #                             ? ( \*STDIN, $_ ) 
+        #                             : $_ 
+        #                         } @command; 
+        #     } else {
+        #         push @command, \*STDIN;
+        #     }
+  
+        # \*STDIN is already included in the @command, see a few lines up
+        my $ok = eval { IPC::Run::run(   @command, 
+                                fileno(STDOUT).'>',
+                                $_out_handler,
+                                fileno(STDERR).'>',
+                                $_err_handler
+                            )
+                        };
+
+        ### all is well
+        if( $ok ) {
+            return $self->ok( $ok );
+
+        ### some error occurred
+        } else {
+            $self->ok( 0 );
+
+            ### if the eval fails due to an exception, deal with it
+            ### unless it's an alarm 
+            if( $@ and not UNIVERSAL::isa( $@, ALARM_CLASS ) ) {        
+                $self->error( $@ );
+
+            ### if it *is* an alarm, propagate        
+            } elsif( $@ ) {
+                die $@;
+
+            ### some error in the sub command
+            } else {
+                $self->error( $self->_pp_child_error( $cmd, $? ) );
+            }
+    
+            return;
+        }
     }
 }
 
@@ -738,6 +744,68 @@ sub _system_run {
         return $cmd;
     }
 }
+
+
+### XXX this is cribbed STRAIGHT from M::B 0.30 here:
+### http://search.cpan.org/src/KWILLIAMS/Module-Build-0.30/lib/Module/Build/Platform/Windows.pm:split_like_shell
+### XXX this *should* be integrated into text::parsewords
+sub _split_like_shell_win32 {
+  # As it turns out, Windows command-parsing is very different from
+  # Unix command-parsing.  Double-quotes mean different things,
+  # backslashes don't necessarily mean escapes, and so on.  So we
+  # can't use Text::ParseWords::shellwords() to break a command string
+  # into words.  The algorithm below was bashed out by Randy and Ken
+  # (mostly Randy), and there are a lot of regression tests, so we
+  # should feel free to adjust if desired.
+  
+  local $_ = shift;
+  
+  my @argv;
+  return @argv unless defined() && length();
+  
+  my $arg = '';
+  my( $i, $quote_mode ) = ( 0, 0 );
+  
+  while ( $i < length() ) {
+    
+    my $ch      = substr( $_, $i  , 1 );
+    my $next_ch = substr( $_, $i+1, 1 );
+    
+    if ( $ch eq '\\' && $next_ch eq '"' ) {
+      $arg .= '"';
+      $i++;
+    } elsif ( $ch eq '\\' && $next_ch eq '\\' ) {
+      $arg .= '\\';
+      $i++;
+    } elsif ( $ch eq '"' && $next_ch eq '"' && $quote_mode ) {
+      $quote_mode = !$quote_mode;
+      $arg .= '"';
+      $i++;
+    } elsif ( $ch eq '"' && $next_ch eq '"' && !$quote_mode &&
+          ( $i + 2 == length()  ||
+        substr( $_, $i + 2, 1 ) eq ' ' )
+        ) { # for cases like: a"" => [ 'a' ]
+      push( @argv, $arg );
+      $arg = '';
+      $i += 2;
+    } elsif ( $ch eq '"' ) {
+      $quote_mode = !$quote_mode;
+    } elsif ( $ch eq ' ' && !$quote_mode ) {
+      push( @argv, $arg ) if $arg;
+      $arg = '';
+      ++$i while substr( $_, $i + 1, 1 ) eq ' ';
+    } else {
+      $arg .= $ch;
+    }
+    
+    $i++;
+  }
+  
+  push( @argv, $arg ) if defined( $arg ) && length( $arg );
+  return @argv;
+}
+
+
 
 {   use File::Spec;
     use Symbol;
