@@ -1,3 +1,21 @@
+Changes for 0.41_07 Sun Oct  5 18:18:15 CEST 2008
+=================================================
+* This release addresses issues for Win32 commands using quoted
+  strings containing whitespace. Non Win32 users need not upgrade.
+* Copy in Module::Build::Platform::Windows->split_like_shell, as 
+  Text::ParseWords::shelwords() uses UNIX semantics, which breaks on
+  Win32. Now IPC:Cmd uses ->split_like_shell on Win32, and shellwords()
+  on a UNIX like platform.
+* Export QUOTE and add docs for it to allow users to pick a platform
+  agnostic quote character.
+* Utility functions to check for ipc::run and ipc::open3 presence
+  now return their respective version
+* Use '"' (double quote) as quote character in all the whitespace tests 
+  -- they only contain constants
+* Improved diagnostics in test suite, so it's easier to see what
+  configuration failed from a single line of test output
+* Disable gzip test in production releases
+
 Changes for 0.41_06 Wed Sep 24 17:03:14 CEST 2008
 =================================================
 * Add missing source file for tests. Users of 0.41_05
