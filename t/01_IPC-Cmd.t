@@ -18,8 +18,8 @@ use_ok( $Class,         $_ ) for @Funcs;
 can_ok( $Class,         $_ ) for @Funcs, @Meths;
 can_ok( __PACKAGE__,    $_ ) for @Funcs;
 
-my $Have_IPC_Run    = $Class->can_use_ipc_run;
-my $Have_IPC_Open3  = $Class->can_use_ipc_open3;
+my $Have_IPC_Run    = $Class->can_use_ipc_run   || 0;
+my $Have_IPC_Open3  = $Class->can_use_ipc_open3 || 0;
 
 diag("IPC::Run: $Have_IPC_Run   IPC::Open3: $Have_IPC_Open3");    
 
