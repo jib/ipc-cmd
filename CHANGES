@@ -1,3 +1,8 @@
+Changes for 0.42    Fri Oct 10 11:42:28 CEST 2008
+=================================================
+* Promote 0.41_07 to stable as it passes tests on all
+  CPAN Testers platforms now. 
+
 Changes for 0.41_07 Sun Oct  5 18:18:15 CEST 2008
 =================================================
 * This release addresses issues for Win32 commands using quoted
