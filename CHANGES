@@ -1,3 +1,8 @@
+Changes for 0.44    Mon May  4 10:13:19 CEST 2009
+=================================================
+* Apply core patch to silence diagnostics during perl 
+  core tests. Users of 0.42 need not upgrade.
+
 Changes for 0.42    Fri Oct 10 11:42:28 CEST 2008
 =================================================
 * Promote 0.41_07 to stable as it passes tests on all
