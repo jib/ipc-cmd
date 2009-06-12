@@ -1,3 +1,9 @@
+Changes for 0.46    Fri Jun 12 13:40:09 UTC 2009
+=================================================
+* Apply patch from Craig Berry to quote arguments correctly
+  on VMS. See RT #46288 for details.
+  Non-VMS users need not upgrade
+
 Changes for 0.44    Mon May  4 10:13:19 CEST 2009
 =================================================
 * Apply core patch to silence diagnostics during perl 
