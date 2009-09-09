@@ -24,6 +24,8 @@ my $prereqs = {
     'Module::Load::Conditional' => 0,
     'Locale::Maketext::Simple'  => 0,
     'IPC::Run'                  => '0.55',
+    'File::Spec'                => 0,
+    'ExtUtils::MakeMaker'       => 0,
 };
 delete $prereqs->{'IPC::Run'} unless $opts->{'b'};
 
