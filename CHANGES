@@ -1,3 +1,7 @@
+Changes for 0.52    Fri Nov 13 16:15:11 GMT 2009
+=================================================
+* Added documentation for run_forked()
+
 Changes for 0.51_01 Sun Nov  8 22:36:33 GMT 2009
 =================================================
 * Apply patch from Petya Kohts, RT #50398, which adds
