@@ -563,6 +563,12 @@ stdout from the executing program.
 You may provide a coderef of a subroutine that will be called a portion of data is received on 
 stderr from the executing program.
 
+=item C<discard_output>
+
+Discards the buffering of the standard output and standard errors for return by run_forked(). 
+With this option you have to use the std*_handlers to read what the command outputs. 
+Useful for commands that send a lot of output.
+
 =back
 
 C<run_forked> will return a HASHREF with the following keys:
@@ -580,17 +586,17 @@ The number of seconds the program ran for before being terminated, or 0 if no ti
 =item C<stdout>
 
 Holds the standard output of the executed command
-(or empty string if there were no stdout output; it's always defined!)
+(or empty string if there were no stdout output or if discard_output was used; it's always defined!)
 
 =item C<stderr>
 
 Holds the standard error of the executed command
-(or empty string if there were no stderr output; it's always defined!)
+(or empty string if there were no stderr output or if discard_output was used; it's always defined!)
 
 =item C<merged>
 
 Holds the standard output and error of the executed command merged into one stream
-(or empty string if there were no output at all; it's always defined!)
+(or empty string if there were no output at all or if discard_output was used; it's always defined!)
 
 =item C<err_msg>
 
