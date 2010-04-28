@@ -751,17 +751,20 @@ sub run_forked {
         }
 
         while (my $l = <$child_stdout_socket>) {
-          $child_stdout .= $l;
-          $child_merged .= $l;
+          if (!$opts->{discard_output}) {
+            $child_stdout .= $l;
+            $child_merged .= $l;
+          }
 
           if ($opts->{'stdout_handler'} && ref($opts->{'stdout_handler'}) eq 'CODE') {
             $opts->{'stdout_handler'}->($l);
           }
         }
         while (my $l = <$child_stderr_socket>) {
-          $child_stderr .= $l;
-          $child_merged .= $l;
-
+          if (!$opts->{discard_output}) {
+            $child_stderr .= $l;
+            $child_merged .= $l;
+          }
           if ($opts->{'stderr_handler'} && ref($opts->{'stderr_handler'}) eq 'CODE') {
             $opts->{'stderr_handler'}->($l);
           }
