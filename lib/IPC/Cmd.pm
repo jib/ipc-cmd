@@ -360,6 +360,10 @@ sub kill_gently {
     $wait_cycles = $wait_cycles + 1;
     Time::HiRes::usleep(250000); # half a second
   }
+
+  if (!$child_finished) {
+    kill(9, $pid);
+  }
 }
 
 sub open3_run {
@@ -651,7 +655,6 @@ sub run_forked {
       close($parent_stderr_socket);
       close($parent_info_socket);
 
-      my $child_timedout = 0;
       my $flags;
 
       # prepare sockets to read from child
@@ -673,11 +676,13 @@ sub run_forked {
 
   #    print "child $pid started\n";
 
+      my $child_timedout = 0;
       my $child_finished = 0;
       my $child_stdout = '';
       my $child_stderr = '';
       my $child_merged = '';
       my $child_exit_code = 0;
+      my $parent_died = 0;
 
       my $got_sig_child = 0;
       $SIG{'CHLD'} = sub { $got_sig_child = time(); };
@@ -685,9 +690,26 @@ sub run_forked {
       my $child_child_pid;
 
       while (!$child_finished) {
+        my $now = time();
+
+        if ($opts->{'terminate_on_parent_sudden_death'}) {
+          $opts->{'runtime'}->{'last_parent_check'} = 0
+            unless defined($opts->{'runtime'}->{'last_parent_check'});
+
+          # check for parent once each five seconds
+          if ($now - $opts->{'runtime'}->{'last_parent_check'} > 5) {
+            if (getppid() eq "1") {
+              kill (-9, $pid);
+              $parent_died = 1;
+            }
+
+            $opts->{'runtime'}->{'last_parent_check'} = $now;
+          }
+        }
+
         # user specified timeout
         if ($opts->{'timeout'}) {
-          if (time() - $start_time > $opts->{'timeout'}) {
+          if ($now - $start_time > $opts->{'timeout'}) {
             kill (-9, $pid);
             $child_timedout = 1;
           }
@@ -697,7 +719,7 @@ sub run_forked {
         # kill process after that and finish wait loop;
         # shouldn't ever happen -- remove this code?
         if ($got_sig_child) {
-          if (time() - $got_sig_child > 10) {
+          if ($now - $got_sig_child > 10) {
             print STDERR "waitpid did not return -1 for 10 seconds after SIG_CHLD, killing [$pid]\n";
             kill (-9, $pid);
             $child_finished = 1;
@@ -776,6 +798,7 @@ sub run_forked {
         'merged' => $child_merged,
         'timeout' => $child_timedout ? $opts->{'timeout'} : 0,
         'exit_code' => $child_exit_code,
+       'parent_died' => $parent_died,
         };
 
       my $err_msg = '';
@@ -784,6 +807,9 @@ sub run_forked {
       }
       if ($o->{'timeout'}) {
         $err_msg .= "ran more than [$o->{'timeout'}] seconds\n";
+      }
+      if ($o->{'parent_died'}) {
+        $err_msg .= "parent died\n";
       }
       if ($o->{'stdout'}) {
         $err_msg .= "stdout:\n" . $o->{'stdout'} . "\n";
