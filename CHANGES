@@ -1,3 +1,13 @@
+Changes for 0.58    Thu Apr 29 20:49:07 BST 2010
+=================================================
+* Applied patch from Petya Kohts, RT #50398, which
+  adds 'terminate_on_parent_sudden_death' option to
+  run_forked().
+* Applied patches from David Morel RT #56973, which
+  add 'discard_output' option to run_forked().
+* Added documentation as suggested by Rafaël Garcia-Suarez
+  in RT #56973
+
 Changes for 0.56    Wed Feb  3 14:17:00 GMT 2010
 =================================================
 * Applied patch from Petya Kohts, RT #50398, which 
