@@ -569,6 +569,11 @@ Discards the buffering of the standard output and standard errors for return by 
 With this option you have to use the std*_handlers to read what the command outputs. 
 Useful for commands that send a lot of output.
 
+=item C<terminate_on_parent_sudden_death>
+
+Enable this option if you wish all spawned processes to be killed if the initially spawned
+process (the parent) is killed or dies without waiting for child processes.
+
 =back
 
 C<run_forked> will return a HASHREF with the following keys:
