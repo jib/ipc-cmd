@@ -1,6 +1,8 @@
 * Corrected spelling mistakes in POD, spotted by H.Merijn Brand
 * Apply a patch from Burak Gursoy RT #58886, which fixes paths 
   on MSWin32
+* Apply patch from Petya Kohts, RT #50398, which allows more
+  flexible configuration of run_forked and its children
 
 Changes for 0.58    Thu Apr 29 20:49:07 BST 2010
 =================================================
