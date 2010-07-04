@@ -32,6 +32,7 @@ BEGIN {
         require FileHandle; FileHandle->import();
         require Socket; Socket->import();
         require Time::HiRes; Time::HiRes->import();
+        require Win32 if IS_WIN32;
     };
     $CAN_USE_RUN_FORKED = $@ || !IS_VMS && !IS_WIN32;
 
@@ -216,8 +217,9 @@ sub can_run {
         for my $dir (
             (split /\Q$Config::Config{path_sep}\E/, $ENV{PATH}),
             File::Spec->curdir
-        ) {           
-            my $abs = File::Spec->catfile($dir, $command);
+        ) {
+            next if ! $dir || ! -d $dir;
+            my $abs = File::Spec->catfile( IS_WIN32 ? Win32::GetShortPathName( $dir ) : $dir, $command);
             return $abs if $abs = MM->maybe_command($abs);
         }
     }
