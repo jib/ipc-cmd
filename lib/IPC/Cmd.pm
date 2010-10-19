@@ -185,13 +185,16 @@ providing C<run_forked> on the current platform.
 C<can_run> takes but a single argument: the name of a binary you wish
 to locate. C<can_run> works much like the unix binary C<which> or the bash
 command C<type>, which scans through your path, looking for the requested
-binary .
+binary.
 
 Unlike C<which> and C<type>, this function is platform independent and
 will also work on, for example, Win32.
 
-It will return the full path to the binary you asked for if it was
-found, or C<undef> if it was not.
+If called in a scalar context it will return the full path to the binary
+you asked for if it was found, or C<undef> if it was not.
+
+If called in a list context it will return a list of the full paths to instances
+of the binary where found in C<PATH> or an empty list if it was not found.
 
 =cut
 
@@ -210,6 +213,8 @@ sub can_run {
     require File::Spec;
     require ExtUtils::MakeMaker;
 
+    my @possibles;
+
     if( File::Spec->file_name_is_absolute($command) ) {
         return MM->maybe_command($command);
 
@@ -220,9 +225,11 @@ sub can_run {
         ) {
             next if ! $dir || ! -d $dir;
             my $abs = File::Spec->catfile( IS_WIN32 ? Win32::GetShortPathName( $dir ) : $dir, $command);
-            return $abs if $abs = MM->maybe_command($abs);
+            push @possibles, $abs if $abs = MM->maybe_command($abs);
         }
     }
+    return @possibles if wantarray;
+    return shift @possibles;
 }
 
 =head2 $ok | ($ok, $err, $full_buf, $stdout_buff, $stderr_buff) = run( command => COMMAND, [verbose => BOOL, buffer => \$SCALAR, timeout => DIGIT] );
