@@ -1,3 +1,8 @@
+Changes for 0.62    Tue Oct 19 15:51:30 BST 2010
+=================================================
+* Amended can_run behaviour to run all found instances
+  of the given binary in a list context
+
 Changes for 0.60    Mon Jul  5 09:04:54 BST 2010
 =================================================
 * Corrected spelling mistakes in POD, spotted by H.Merijn Brand
