@@ -14,6 +14,7 @@ BEGIN {
     use Exporter    ();
     use vars        qw[ @ISA $VERSION @EXPORT_OK $VERBOSE $DEBUG
                         $USE_IPC_RUN $USE_IPC_OPEN3 $CAN_USE_RUN_FORKED $WARN
+                        $INSTANCES
                     ];
 
     $VERSION        = '0.62';
@@ -193,7 +194,8 @@ will also work on, for example, Win32.
 If called in a scalar context it will return the full path to the binary
 you asked for if it was found, or C<undef> if it was not.
 
-If called in a list context it will return a list of the full paths to instances
+If called in a list context and the global variable C<$INSTANCES> is a true value 
+it will return a list of the full paths to instances
 of the binary where found in C<PATH> or an empty list if it was not found.
 
 =cut
@@ -228,7 +230,7 @@ sub can_run {
             push @possibles, $abs if $abs = MM->maybe_command($abs);
         }
     }
-    return @possibles if wantarray;
+    return @possibles if wantarray and $INSTANCES;
     return shift @possibles;
 }
 
@@ -1708,6 +1710,13 @@ This variable controls whether run time warnings should be issued, like
 the failure to load an C<IPC::*> module you explicitly requested.
 
 Defaults to true. Turn this off at your own risk.
+
+=head2 $IPC::Cmd::INSTANCES
+
+This variable controls whether C<can_run> will return all instances of
+the binary it finds in the C<PATH> when called in a list context.
+
+Defaults to false, set to true to enable the described behaviour.
 
 =head1 Caveats
 
