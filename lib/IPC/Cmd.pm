@@ -1499,7 +1499,7 @@ sub _split_like_shell_win32 {
     } elsif ( $ch eq '"' ) {
       $quote_mode = !$quote_mode;
     } elsif ( $ch eq ' ' && !$quote_mode ) {
-      push( @argv, $arg ) if $arg;
+      push( @argv, $arg ) if defined( $arg ) && length( $arg );
       $arg = '';
       ++$i while substr( $_, $i + 1, 1 ) eq ' ';
     } else {
