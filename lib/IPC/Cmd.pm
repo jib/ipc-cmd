@@ -76,7 +76,7 @@ IPC::Cmd - finding and running system commands made easy
 
 
     ### in list context ###
-    my( $success, $error_code, $full_buf, $stdout_buf, $stderr_buf ) =
+    my( $success, $error_message, $full_buf, $stdout_buf, $stderr_buf ) =
             run( command => $cmd, verbose => 0 );
 
     if( $success ) {
