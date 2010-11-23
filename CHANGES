@@ -1,4 +1,10 @@
-CHanges for 0.64    Tue Oct 19 19:01:05 BST 2010
+Changes for 0.66    Tue Nov 23 12:10:24 GMT 2010
+=================================================
+* Apply documentation patch from Dan Dascalescu [RT # 63250]
+* Apply another documentation patch from Dan Dascalescu [RT #63251]
+* Fix an issue with _split_like_shell_win32() raised by tunakermit [RT #62961]
+
+Changes for 0.64    Tue Oct 19 19:01:05 BST 2010
 =================================================
 * Only enable the can_run instances behaviour when 
   global variable $INSTANCES is set
