@@ -1,3 +1,7 @@
+Changes for 0.68    Fri Jan  7 21:08:58 GMT 2011
+=================================================
+* Apply blead patch from Peter Acklam
+
 Changes for 0.66    Tue Nov 23 12:10:24 GMT 2010
 =================================================
 * Apply documentation patch from Dan Dascalescu [RT # 63250]
