@@ -1,3 +1,18 @@
+Changes for 0.70    Mon Jan 31 20:34:09 GMT 2011
+=================================================
+* Apply a patch from Petya Kohts, RT #65276, with
+  changes for run_forked:
+
+  1) fix for the typo in the name of the signal
+  2) changed default for clean_up_children (which
+     seems to be the behavior expected by the majority of the users)
+  3) added detection (and forwarding to the caller) of the case
+     when run program is killed by signal
+  4) kill_gently is now used in cases when parent died
+     and when the executed program times out
+  5) added options which allow to execute some user code
+     in the beginning and at the end of the child
+
 Changes for 0.68    Fri Jan  7 21:08:58 GMT 2011
 =================================================
 * Apply blead patch from Peter Acklam
