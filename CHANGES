@@ -1,3 +1,8 @@
+Changes for 0.71_01 Tue May 10 13:59:46 BST 2011
+=================================================
+* Added IPC::Open3 support for capturing STDOUT/STDERR
+  on MSWin32, prefer this over IPC::Run
+
 Changes for 0.70    Mon Jan 31 20:34:09 GMT 2011
 =================================================
 * Apply a patch from Petya Kohts, RT #65276, with
