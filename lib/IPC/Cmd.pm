@@ -17,7 +17,7 @@ BEGIN {
                         $INSTANCES
                     ];
 
-    $VERSION        = '0.71_01';
+    $VERSION        = '0.71_02';
     $VERBOSE        = 0;
     $DEBUG          = 0;
     $WARN           = 1;
@@ -1220,6 +1220,7 @@ sub _open3_run_win32 {
   };
 
   $cmd = [ grep { defined && length } @$cmd ] if ref $cmd;
+  $cmd = $self->__fix_cmd_whitespace_and_special_chars( $cmd );
   my $pp_cmd = (ref $cmd ? "@$cmd" : $cmd);
 
   my ($pid, $to_chld, $fr_chld, $fr_chld_err) =

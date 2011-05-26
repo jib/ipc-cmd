@@ -1,3 +1,7 @@
+Changes for 0.71_02 Thu May 26 12:10:40 BST 2011
+=================================================
+* Missed some cleanup in the Win32 IPC::Open3 support
+
 Changes for 0.71_01 Tue May 10 13:59:46 BST 2011
 =================================================
 * Added IPC::Open3 support for capturing STDOUT/STDERR
