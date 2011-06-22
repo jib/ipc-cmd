@@ -17,7 +17,7 @@ BEGIN {
                         $INSTANCES
                     ];
 
-    $VERSION        = '0.71_02';
+    $VERSION        = '0.72';
     $VERBOSE        = 0;
     $DEBUG          = 0;
     $WARN           = 1;
@@ -1221,10 +1221,9 @@ sub _open3_run_win32 {
 
   $cmd = [ grep { defined && length } @$cmd ] if ref $cmd;
   $cmd = $self->__fix_cmd_whitespace_and_special_chars( $cmd );
-  my $pp_cmd = (ref $cmd ? "@$cmd" : $cmd);
 
   my ($pid, $to_chld, $fr_chld, $fr_chld_err) =
-    $open3->( $pp_cmd );
+    $open3->( ( ref $cmd ? @$cmd : $cmd ) );
 
   my $in_sel  = IO::Select->new();
   my $out_sel = IO::Select->new();
@@ -1787,14 +1786,15 @@ C<run> will try to execute your command using the following logic:
 
 If you have C<IPC::Run> installed, and the variable C<$IPC::Cmd::USE_IPC_RUN>
 is set to true (See the L<"Global Variables"> section) use that to execute
-the command. You will have the full output available in buffers, interactive commands are sure to work  and you are guaranteed to have your verbosity
+the command. You will have the full output available in buffers, interactive commands
+are sure to work  and you are guaranteed to have your verbosity
 settings honored cleanly.
 
 =item *
 
 Otherwise, if the variable C<$IPC::Cmd::USE_IPC_OPEN3> is set to true
 (See the L<"Global Variables"> section), try to execute the command using
-L<IPC::Open3>. Buffers will be available on all platforms except C<Win32>,
+L<IPC::Open3>. Buffers will be available on all platforms,
 interactive commands will still execute cleanly, and also your verbosity
 settings will be adhered to nicely;
 
@@ -1826,7 +1826,7 @@ commands to the screen or not. The default is 0.
 =head2 $IPC::Cmd::USE_IPC_RUN
 
 This variable controls whether IPC::Cmd will try to use L<IPC::Run>
-when available and suitable. Defaults to true if you are on C<Win32>.
+when available and suitable.
 
 =head2 $IPC::Cmd::USE_IPC_OPEN3
 
