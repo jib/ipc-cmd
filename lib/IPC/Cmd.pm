@@ -1072,7 +1072,7 @@ sub run {
     $cmd = _quote_args_vms( $cmd ) if IS_VMS;
 
     ### strip any empty elements from $cmd if present
-    $cmd = [ grep { defined && length } @$cmd ] if ref $cmd;
+    $cmd = [ grep { defined } @$cmd ] if ref $cmd;
 
     my $pp_cmd = (ref $cmd ? "@$cmd" : $cmd);
     print loc("Running [%1]...\n", $pp_cmd ) if $verbose;
