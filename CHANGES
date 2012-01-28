@@ -1,3 +1,8 @@
+Changes for 0.74    Sat Jan 28 16:12:31 GMT 2012
+=================================================
+* Applied patch from WATANABE Hiroaki [RT #74470]
+  "Empty string cannot be passed to command"
+
 Changes for 0.72    Wed Jun 22 12:29:59 BST 2011
 =================================================
 * Added IPC::Open3 support for capturing STDOUT/STDERR
