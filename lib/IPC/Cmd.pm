@@ -17,7 +17,7 @@ BEGIN {
                         $INSTANCES $ALLOW_NULL_ARGS
                     ];
 
-    $VERSION        = '0.74';
+    $VERSION        = '0.76';
     $VERBOSE        = 0;
     $DEBUG          = 0;
     $WARN           = 1;
