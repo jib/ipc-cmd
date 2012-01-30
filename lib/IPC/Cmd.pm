@@ -14,7 +14,7 @@ BEGIN {
     use Exporter    ();
     use vars        qw[ @ISA $VERSION @EXPORT_OK $VERBOSE $DEBUG
                         $USE_IPC_RUN $USE_IPC_OPEN3 $CAN_USE_RUN_FORKED $WARN
-                        $INSTANCES
+                        $INSTANCES $ALLOW_NULL_ARGS
                     ];
 
     $VERSION        = '0.74';
@@ -23,6 +23,7 @@ BEGIN {
     $WARN           = 1;
     $USE_IPC_RUN    = IS_WIN32 && !IS_WIN98;
     $USE_IPC_OPEN3  = not IS_VMS;
+    $ALLOW_NULL_ARGS = 0;
 
     $CAN_USE_RUN_FORKED = 0;
     eval {
@@ -1077,7 +1078,12 @@ sub run {
     $cmd = _quote_args_vms( $cmd ) if IS_VMS;
 
     ### strip any empty elements from $cmd if present
-    $cmd = [ grep { defined } @$cmd ] if ref $cmd;
+    if ( $ALLOW_NULL_ARGS ) {
+      $cmd = [ grep { defined } @$cmd ] if ref $cmd;
+    }
+    else {
+      $cmd = [ grep { defined && length } @$cmd ] if ref $cmd;
+    }
 
     my $pp_cmd = (ref $cmd ? "@$cmd" : $cmd);
     print loc("Running [%1]...\n", $pp_cmd ) if $verbose;
@@ -1851,6 +1857,14 @@ This variable controls whether C<can_run> will return all instances of
 the binary it finds in the C<PATH> when called in a list context.
 
 Defaults to false, set to true to enable the described behaviour.
+
+=head2 $IPC::Cmd::ALLOW_NULL_ARGS
+
+This variable controls whether C<run> will remove any empty/null arguments
+it finds in command arguments.
+
+Defaults to false, so it will remove null arguments. Set to true to allow
+them.
 
 =head1 Caveats
 
