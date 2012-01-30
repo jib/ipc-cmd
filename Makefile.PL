@@ -1,35 +1,23 @@
-use ExtUtils::MakeMaker;
 use strict;
-use Getopt::Std;
-
-my $opts = {};
-getopts( 'b', $opts );
-
-### promote IPC::Run on windows
-if ( $^O eq 'MSWin32' and !(eval{require IPC::Run}) and !$opts->{'b'} ) {
-    warn "******************************************************************\n".
-         "***\n".
-         "*** IPC::Run is an optional requirement for Win32 systems to\n".
-         "*** capture buffers.\n" .
-         "*** If you would like to install IPC::Cmd with buffer support\n".
-         "*** on Win32, please rerun this Makefile.PL with the '-b' option\n".
-         "*** or install IPC::Run manually\n".
-         "***\n".
-         "******************************************************************\n";
-}    
+use ExtUtils::MakeMaker;
 
 my $prereqs = {
-    'Test::More'                => 0, 
+    'Test::More'                => 0,
     'Params::Check'             => '0.20',
     'Module::Load::Conditional' => 0,
     'Locale::Maketext::Simple'  => 0,
-    'IPC::Run'                  => '0.55',
     'File::Spec'                => 0,
     'ExtUtils::MakeMaker'       => 0,
 };
-delete $prereqs->{'IPC::Run'} unless $opts->{'b'};
 
-WriteMakefile (
+WriteMakefile1(
+    LICENSE => 'perl',
+    META_MERGE => {
+        resources => {
+            repository => 'https://github.com/jib/ipc-cmd',
+        },
+    },
+
     NAME            => 'IPC::Cmd',
     VERSION_FROM    => 'lib/IPC/Cmd.pm', # finds $VERSION
     dist            => { COMPRESS => 'gzip -9f', SUFFIX => 'gz' },
@@ -37,4 +25,27 @@ WriteMakefile (
     INSTALLDIRS     => ( $] >= 5.009005 ? 'perl' : 'site' ),
     AUTHOR          => 'Jos Boumans <kane[at]cpan.org>',
     ABSTRACT        => 'A cross platform way of running (interactive) commandline programs.'
-); 
+);
+
+sub WriteMakefile1 {  #Written by Alexandr Ciornii, version 0.21. Added by eumm-upgrade.
+    my %params=@_;
+    my $eumm_version=$ExtUtils::MakeMaker::VERSION;
+    $eumm_version=eval $eumm_version;
+    die "EXTRA_META is deprecated" if exists $params{EXTRA_META};
+    die "License not specified" if not exists $params{LICENSE};
+    if ($params{BUILD_REQUIRES} and $eumm_version < 6.5503) {
+        #EUMM 6.5502 has problems with BUILD_REQUIRES
+        $params{PREREQ_PM}={ %{$params{PREREQ_PM} || {}} , %{$params{BUILD_REQUIRES}} };
+        delete $params{BUILD_REQUIRES};
+    }
+    delete $params{CONFIGURE_REQUIRES} if $eumm_version < 6.52;
+    delete $params{MIN_PERL_VERSION} if $eumm_version < 6.48;
+    delete $params{META_MERGE} if $eumm_version < 6.46;
+    delete $params{META_ADD} if $eumm_version < 6.46;
+    delete $params{LICENSE} if $eumm_version < 6.31;
+    delete $params{AUTHOR} if $] < 5.005;
+    delete $params{ABSTRACT_FROM} if $] < 5.005;
+    delete $params{BINARY_LOCATION} if $] < 5.005;
+
+    WriteMakefile(%params);
+}
