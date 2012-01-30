@@ -42,6 +42,7 @@ BEGIN {
 }
 
 require Carp;
+use Socket;
 use File::Spec;
 use Params::Check               qw[check];
 use Text::ParseWords            ();             # import ONLY if needed!
@@ -398,6 +399,8 @@ sub install_layered_signal {
 sub kill_gently {
   my ($pid, $opts) = @_;
 
+  require POSIX;
+
   $opts = {} unless $opts;
   $opts->{'wait_time'} = 2 unless defined($opts->{'wait_time'});
   $opts->{'first_kill_type'} = 'just_process' unless $opts->{'first_kill_type'};
@@ -414,7 +417,7 @@ sub kill_gently {
   my $wait_start_time = time();
 
   while (!$child_finished && $wait_start_time + $opts->{'wait_time'} > time()) {
-    my $waitpid = waitpid($pid, WNOHANG);
+    my $waitpid = waitpid($pid, POSIX::WNOHANG);
     if ($waitpid eq -1) {
       $child_finished = 1;
     }
@@ -705,6 +708,8 @@ sub run_forked {
     ### container to store things in
     my $self = bless {}, __PACKAGE__;
 
+    require POSIX;
+
     if (!can_use_run_forked()) {
         Carp::carp("run_forked is not available: $CAN_USE_RUN_FORKED");
         return;
@@ -765,19 +770,19 @@ sub run_forked {
       # prepare sockets to read from child
 
       $flags = 0;
-      fcntl($child_stdout_socket, F_GETFL, $flags) || die "can't fnctl F_GETFL: $!";
-      $flags |= O_NONBLOCK;
-      fcntl($child_stdout_socket, F_SETFL, $flags) || die "can't fnctl F_SETFL: $!";
+      fcntl($child_stdout_socket, POSIX::F_GETFL, $flags) || die "can't fnctl F_GETFL: $!";
+      $flags |= POSIX::O_NONBLOCK;
+      fcntl($child_stdout_socket, POSIX::F_SETFL, $flags) || die "can't fnctl F_SETFL: $!";
 
       $flags = 0;
-      fcntl($child_stderr_socket, F_GETFL, $flags) || die "can't fnctl F_GETFL: $!";
-      $flags |= O_NONBLOCK;
-      fcntl($child_stderr_socket, F_SETFL, $flags) || die "can't fnctl F_SETFL: $!";
+      fcntl($child_stderr_socket, POSIX::F_GETFL, $flags) || die "can't fnctl F_GETFL: $!";
+      $flags |= POSIX::O_NONBLOCK;
+      fcntl($child_stderr_socket, POSIX::F_SETFL, $flags) || die "can't fnctl F_SETFL: $!";
 
       $flags = 0;
-      fcntl($child_info_socket, F_GETFL, $flags) || die "can't fnctl F_GETFL: $!";
-      $flags |= O_NONBLOCK;
-      fcntl($child_info_socket, F_SETFL, $flags) || die "can't fnctl F_SETFL: $!";
+      fcntl($child_info_socket, POSIX::F_GETFL, $flags) || die "can't fnctl F_GETFL: $!";
+      $flags |= POSIX::O_NONBLOCK;
+      fcntl($child_info_socket, POSIX::F_SETFL, $flags) || die "can't fnctl F_SETFL: $!";
 
   #    print "child $pid started\n";
 
@@ -856,7 +861,7 @@ sub run_forked {
           $child_finished = 1;
         }
 
-        my $waitpid = waitpid($pid, WNOHANG);
+        my $waitpid = waitpid($pid, POSIX::WNOHANG);
 
         # child finished, catch it's exit status
         if ($waitpid ne 0 && $waitpid ne -1) {
