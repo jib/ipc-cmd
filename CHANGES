@@ -1,3 +1,9 @@
+Chnages for 0.78    Mon Apr 30 19:45:00 BST 2012
+=================================================
+* Use POSIX::_exit() instead of exit() in
+  run_forked(). Reported by Mithun Ayachit
+  [RT 76901]
+
 Changes for 0.76    Mon Jan 30 11:30:53 GMT 2012
 =================================================
 * Make the empty arg stripping the default again,
