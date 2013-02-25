@@ -212,7 +212,6 @@ sub can_run {
         return $command if scalar $syms->getsym( uc $command );
     }
 
-    require Config;
     require File::Spec;
     require ExtUtils::MakeMaker;
 
@@ -223,7 +222,7 @@ sub can_run {
 
     } else {
         for my $dir (
-            (split /\Q$Config::Config{path_sep}\E/, $ENV{PATH}),
+            File::Spec->path,
             File::Spec->curdir
         ) {
             next if ! $dir || ! -d $dir;
