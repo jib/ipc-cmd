@@ -786,6 +786,30 @@ sub run_forked {
 
   #    print "child $pid started\n";
 
+      my $child_output = {
+        $child_stdout_socket->fileno => {
+          'scalar_buffer' => "",
+          'child_handle' => $child_stdout_socket,
+          'block_size' => ($child_stdout_socket->stat)[11] || 1024,
+          'protocol' => 'stdout',
+          },
+        $child_stderr_socket->fileno => {
+          'scalar_buffer' => "",
+          'child_handle' => $child_stderr_socket,
+          'block_size' => ($child_stderr_socket->stat)[11] || 1024,
+          'protocol' => 'stderr',
+          },
+        $child_info_socket->fileno => {
+          'scalar_buffer' => "",
+          'child_handle' => $child_info_socket,
+          'block_size' => ($child_info_socket->stat)[11] || 1024,
+          'protocol' => 'info',
+          },
+        };
+
+			my $select = IO::Select->new();
+      $select->add($child_stdout_socket, $child_stderr_socket, $child_info_socket);
+
       my $child_timedout = 0;
       my $child_finished = 0;
       my $child_stdout = '';
@@ -873,39 +897,77 @@ sub run_forked {
           next;
         }
 
-        # child -> parent simple internal communication protocol
-        while (my $l = <$child_info_socket>) {
-          if ($l =~ /^spawned ([0-9]+?)\n(.*?)/so) {
-            $child_child_pid = $1;
-            $l = $2;
-          }
-          if ($l =~ /^reaped ([0-9]+?)\n(.*?)/so) {
-            $child_child_pid = undef;
-            $l = $2;
-          }
-          if ($l =~ /^[\d]+ killed with ([0-9]+?)\n(.*?)/so) {
-            $child_killed_by_signal = $1;
-            $l = $2;
-          }
-        }
+        foreach my $fd ($select->can_read(1/100)) {
+          my $str = $child_output->{$fd->fileno};
+          die("child stream not found: $fd") unless $str;
 
-        while (my $l = <$child_stdout_socket>) {
-          if (!$opts->{'discard_output'}) {
-            $child_stdout .= $l;
-            $child_merged .= $l;
+          my $data = "";
+          my $count = $fd->sysread($data, $str->{'block_size'});
+
+          if ($count) {
+              # extract all the available lines and store the rest in temporary buffer
+              if ($data =~ /(.+\n)([^\n]*)/so) {
+                  $data = $str->{'scalar_buffer'} . $1;
+                  $str->{'scalar_buffer'} = $2 || "";
+              }
+              else {
+                  $str->{'scalar_buffer'} .= $data;
+                  $data = "";
+              }
+          }
+          elsif ($count eq 0) {
+            $select->remove($fd);
+            $fd->close();
+            if ($str->{'scalar_buffer'}) {
+                $data = $str->{'scalar_buffer'} . "\n";
+            }
+          }
+          else {
+            die("error during sysread on [$fd]: " . $!);
           }
 
-          if ($opts->{'stdout_handler'} && ref($opts->{'stdout_handler'}) eq 'CODE') {
-            $opts->{'stdout_handler'}->($l);
+          # $data contains only full lines (or last line if it was unfinished read
+          # or now new-line in the output of the child); dat is processed
+          # according to the "protocol" of socket
+          if ($str->{'protocol'} eq 'info') {
+            if ($data =~ /^spawned ([0-9]+?)\n(.*?)/so) {
+              $child_child_pid = $1;
+              $data = $2;
+            }
+            if ($data =~ /^reaped ([0-9]+?)\n(.*?)/so) {
+              $child_child_pid = undef;
+              $data = $2;
+            }
+            if ($data =~ /^[\d]+ killed with ([0-9]+?)\n(.*?)/so) {
+              $child_killed_by_signal = $1;
+              $data = $2;
+            }
+
+            # we don't expect any other data in info socket, so it's
+            # some strange violation of protocol, better know about this
+            if ($data) {
+              die("info protocol violation: [$data]");
+            }
           }
-        }
-        while (my $l = <$child_stderr_socket>) {
-          if (!$opts->{'discard_output'}) {
-            $child_stderr .= $l;
-            $child_merged .= $l;
+          if ($str->{'protocol'} eq 'stdout') {
+            if (!$opts->{'discard_output'}) {
+              $child_stdout .= $data;
+              $child_merged .= $data;
+            }
+
+            if ($opts->{'stdout_handler'} && ref($opts->{'stdout_handler'}) eq 'CODE') {
+              $opts->{'stdout_handler'}->($data);
+            }
           }
-          if ($opts->{'stderr_handler'} && ref($opts->{'stderr_handler'}) eq 'CODE') {
-            $opts->{'stderr_handler'}->($l);
+          if ($str->{'protocol'} eq 'stderr') {
+            if (!$opts->{'discard_output'}) {
+              $child_stderr .= $data;
+              $child_merged .= $data;
+            }
+
+            if ($opts->{'stderr_handler'} && ref($opts->{'stderr_handler'}) eq 'CODE') {
+              $opts->{'stderr_handler'}->($data);
+            }
           }
         }
 
@@ -1024,6 +1086,11 @@ sub run_forked {
           });
       }
       elsif (ref($cmd) eq 'CODE') {
+	      # reopen STDOUT and STDERR for child code:
+	      # https://rt.cpan.org/Ticket/Display.html?id=85912
+	      open STDOUT, '>&', $parent_stdout_socket || die("Unable to reopen STDOUT: $!\n");
+	      open STDERR, '>&', $parent_stderr_socket || die("Unable to reopen STDERR: $!\n");
+
         $child_exit_code = $cmd->({
           'opts' => $opts,
           'parent_info' => $parent_info_socket,
@@ -1045,6 +1112,7 @@ sub run_forked {
         $opts->{'child_END'}->();
       }
 
+      $| = 1;
       POSIX::_exit $child_exit_code;
     }
 }
