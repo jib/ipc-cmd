@@ -86,6 +86,13 @@ IPC::Cmd - finding and running system commands made easy
         print join "", @$full_buf;
     }
 
+    ### run_forked example ###
+    my $result = run_forked("$full_path -q -O - theregister.co.uk", {'timeout' => 20});
+    if ($result->{'exit_code'} eq 0 && !$result->{'timeout'}) {
+        print "this is what wget returned:\n";
+        print $result->{'stdout'};
+    }
+
     ### check for features
     print "IPC::Open3 available: "  . IPC::Cmd->can_use_ipc_open3;
     print "IPC::Run available: "    . IPC::Cmd->can_use_ipc_run;
@@ -716,6 +723,9 @@ sub run_forked {
     }
 
     my ($cmd, $opts) = @_;
+    if (ref($cmd) eq 'ARRAY') {
+        $cmd = join(" ", @{$cmd});
+    }
 
     if (!$cmd) {
         Carp::carp("run_forked expects command to run");
@@ -807,7 +817,7 @@ sub run_forked {
           },
         };
 
-			my $select = IO::Select->new();
+      my $select = IO::Select->new();
       $select->add($child_stdout_socket, $child_stderr_socket, $child_info_socket);
 
       my $child_timedout = 0;
@@ -1086,10 +1096,10 @@ sub run_forked {
           });
       }
       elsif (ref($cmd) eq 'CODE') {
-	      # reopen STDOUT and STDERR for child code:
-	      # https://rt.cpan.org/Ticket/Display.html?id=85912
-	      open STDOUT, '>&', $parent_stdout_socket || die("Unable to reopen STDOUT: $!\n");
-	      open STDERR, '>&', $parent_stderr_socket || die("Unable to reopen STDERR: $!\n");
+        # reopen STDOUT and STDERR for child code:
+        # https://rt.cpan.org/Ticket/Display.html?id=85912
+        open STDOUT, '>&', $parent_stdout_socket || die("Unable to reopen STDOUT: $!\n");
+        open STDERR, '>&', $parent_stderr_socket || die("Unable to reopen STDERR: $!\n");
 
         $child_exit_code = $cmd->({
           'opts' => $opts,
@@ -1326,8 +1336,8 @@ sub _open3_run_win32 {
             $in_sel->remove($fh);
         }
         else {
-	          $obj->( "$buf" );
-	      }
+            $obj->( "$buf" );
+        }
       }
 
       for my $fh (@$outs) {
