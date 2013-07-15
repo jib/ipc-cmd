@@ -43,7 +43,6 @@ BEGIN {
 }
 
 require Carp;
-use Socket;
 use File::Spec;
 use Params::Check               qw[check];
 use Text::ParseWords            ();             # import ONLY if needed!
@@ -1284,6 +1283,9 @@ sub _open3_run_win32 {
   my $cmd     = shift;
   my $outhand = shift;
   my $errhand = shift;
+
+  require Socket;
+  Socket->import( qw[AF_UNIX SOCK_STREAM PF_UNSPEC] );
 
   my $pipe = sub {
     socketpair($_[0], $_[1], AF_UNIX, SOCK_STREAM, PF_UNSPEC)
