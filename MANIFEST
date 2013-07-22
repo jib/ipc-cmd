@@ -5,6 +5,7 @@ MANIFEST			This list of files
 README
 t/01_IPC-Cmd.t
 t/02_Interactive.t
+t/03_run-forked.t
 t/src/child.pl
 t/src/output.pl
 t/src/x.tgz

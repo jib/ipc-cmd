@@ -32,7 +32,7 @@ BEGIN {
         require IO::Select; IO::Select->import();
         require IO::Handle; IO::Handle->import();
         require FileHandle; FileHandle->import();
-        require Socket; Socket->import();
+        require Socket;
         require Time::HiRes; Time::HiRes->import();
         require Win32 if IS_WIN32;
     };
@@ -714,12 +714,12 @@ sub run_forked {
     ### container to store things in
     my $self = bless {}, __PACKAGE__;
 
-    require POSIX;
-
     if (!can_use_run_forked()) {
         Carp::carp("run_forked is not available: $CAN_USE_RUN_FORKED");
         return;
     }
+
+    require POSIX;
 
     my ($cmd, $opts) = @_;
     if (ref($cmd) eq 'ARRAY') {
@@ -750,11 +750,11 @@ sub run_forked {
     my $child_info_socket;
     my $parent_info_socket;
 
-    socketpair($child_stdout_socket, $parent_stdout_socket, AF_UNIX, SOCK_STREAM, PF_UNSPEC) ||
+    socketpair($child_stdout_socket, $parent_stdout_socket, &Socket::AF_UNIX, &Socket::SOCK_STREAM, &Socket::PF_UNSPEC) ||
       die ("socketpair: $!");
-    socketpair($child_stderr_socket, $parent_stderr_socket, AF_UNIX, SOCK_STREAM, PF_UNSPEC) ||
+    socketpair($child_stderr_socket, $parent_stderr_socket, &Socket::AF_UNIX, &Socket::SOCK_STREAM, &Socket::PF_UNSPEC) ||
       die ("socketpair: $!");
-    socketpair($child_info_socket, $parent_info_socket, AF_UNIX, SOCK_STREAM, PF_UNSPEC) ||
+    socketpair($child_info_socket, $parent_info_socket, &Socket::AF_UNIX, &Socket::SOCK_STREAM, &Socket::PF_UNSPEC) ||
       die ("socketpair: $!");
 
     $child_stdout_socket->autoflush(1);
@@ -1285,10 +1285,9 @@ sub _open3_run_win32 {
   my $errhand = shift;
 
   require Socket;
-  Socket->import( qw[AF_UNIX SOCK_STREAM PF_UNSPEC] );
 
   my $pipe = sub {
-    socketpair($_[0], $_[1], AF_UNIX, SOCK_STREAM, PF_UNSPEC)
+    socketpair($_[0], $_[1], &Socket::AF_UNIX, &Socket::SOCK_STREAM, &Socket::PF_UNSPEC)
         or return undef;
     shutdown($_[0], 1);  # No more writing for reader
     shutdown($_[1], 0);  # No more reading for writer
