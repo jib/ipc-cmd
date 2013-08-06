@@ -1031,6 +1031,7 @@ sub run_forked {
         'parent_died' => $parent_died,
         'killed_by_signal' => $child_killed_by_signal,
         'child_pgid' => $pid,
+        'cmd' => $cmd,
         };
 
       my $err_msg = '';
