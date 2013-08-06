@@ -1,3 +1,18 @@
+Changes for 0.84    Tue Aug  6 10:03:03 BST 2013
+=================================================
+
+  Enhancements:
+  * Lowered CPU usage for run_forked() (Petya Kohts)
+
+  Bug Fixes:
+  * RT#85912 Handle STDOUT/STDERR for run_forked()
+    and coderefs (Petya Kohts)
+  * RT#76901 fixed regression introduced in 0.78
+    (Petya Kohts)
+  * RT#70530 run_forked() now has a consistent
+    API with run() (Petya Kohts)
+  * Socket only used where needed (bingos)
+
 Changes for 0.82    Sat Jun 29 22:11:22 BST 2013
 =================================================
 * Typo fixes (David Steinbrunner)
