@@ -420,9 +420,9 @@ sub kill_gently {
   }
 
   my $child_finished = 0;
-  my $wait_start_time = time();
+  my $wait_start_time = Time::HiRes::clock_gettime(&Time::HiRes::CLOCK_MONOTONIC);
 
-  while (!$child_finished && $wait_start_time + $opts->{'wait_time'} > time()) {
+  while (!$child_finished && $wait_start_time + $opts->{'wait_time'} > Time::HiRes::clock_gettime(&Time::HiRes::CLOCK_MONOTONIC)) {
     my $waitpid = waitpid($pid, POSIX::WNOHANG);
     if ($waitpid eq -1) {
       $child_finished = 1;
@@ -516,7 +516,7 @@ sub open3_run {
   my $child_finished = 0;
 
   my $got_sig_child = 0;
-  $SIG{'CHLD'} = sub { $got_sig_child = time(); };
+  $SIG{'CHLD'} = sub { $got_sig_child = Time::HiRes::clock_gettime(&Time::HiRes::CLOCK_MONOTONIC); };
 
   while(!$child_finished && ($child_out->opened || $child_err->opened)) {
 
@@ -556,7 +556,7 @@ sub open3_run {
 
     foreach my $fd ($select->can_read(1/100)) {
       my $str = $child_output->{$fd->fileno};
-      psSnake::die("child stream not found: $fd") unless $str;
+      die("child stream not found: $fd") unless $str;
 
       my $data;
       my $count = $fd->sysread($data, $str->{'block_size'});
@@ -575,7 +575,7 @@ sub open3_run {
         $fd->close();
       }
       else {
-        psSnake::die("error during sysread: " . $!);
+        die("error during sysread: " . $!);
       }
     }
   }
@@ -764,7 +764,7 @@ sub run_forked {
     $child_info_socket->autoflush(1);
     $parent_info_socket->autoflush(1);
 
-    my $start_time = time();
+    my $start_time = Time::HiRes::clock_gettime(&Time::HiRes::CLOCK_MONOTONIC);
 
     my $pid;
     if ($pid = fork) {
@@ -832,16 +832,16 @@ sub run_forked {
       my $got_sig_quit = 0;
       my $orig_sig_child = $SIG{'CHLD'};
 
-      $SIG{'CHLD'} = sub { $got_sig_child = time(); };
+      $SIG{'CHLD'} = sub { $got_sig_child = Time::HiRes::clock_gettime(&Time::HiRes::CLOCK_MONOTONIC); };
 
       if ($opts->{'terminate_on_signal'}) {
-        install_layered_signal($opts->{'terminate_on_signal'}, sub { $got_sig_quit = time(); });
+        install_layered_signal($opts->{'terminate_on_signal'}, sub { $got_sig_quit = Time::HiRes::clock_gettime(&Time::HiRes::CLOCK_MONOTONIC); });
       }
 
       my $child_child_pid;
 
       while (!$child_finished) {
-        my $now = time();
+        my $now = Time::HiRes::clock_gettime(&Time::HiRes::CLOCK_MONOTONIC);
 
         if ($opts->{'terminate_on_parent_sudden_death'}) {
           $opts->{'runtime'}->{'last_parent_check'} = 0
@@ -1044,7 +1044,7 @@ sub run_forked {
       if ($o->{'parent_died'}) {
         $err_msg .= "parent died\n";
       }
-      if ($o->{'stdout'}) {
+      if ($o->{'stdout'} && !$opts->{'non_empty_stdout_ok'}) {
         $err_msg .= "stdout:\n" . $o->{'stdout'} . "\n";
       }
       if ($o->{'stderr'}) {

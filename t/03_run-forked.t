@@ -39,7 +39,7 @@ $r = run_forked([$echo, "test"]);
 ok($r->{'stdout'} =~ /test/, "arrayref cmd: https://rt.cpan.org/Ticket/Display.html?id=70530");
 
 $r = run_forked("$sleep 5", {'timeout' => 2});
-ok($r->{'timeout'}, "[sleep 5] runs longer than 2 seconds");
+ok($r->{'timeout'}, "[$sleep 5] runs longer than 2 seconds");
 
 
 # https://rt.cpan.org/Ticket/Display.html?id=85912
@@ -62,3 +62,9 @@ ok($retval->{"stdout"} =~ /blahblah/, "https://rt.cpan.org/Ticket/Display.html?i
 ok($retval->{"stdout"} =~ /Hello sailor/, "https://rt.cpan.org/Ticket/Display.html?id=85912 stdout 2");
 ok($retval->{"stderr"} =~ /Boo/, "https://rt.cpan.org/Ticket/Display.html?id=85912 stderr 1");
 ok($retval->{"stderr"} =~ /eek/, "https://rt.cpan.org/Ticket/Display.html?id=85912 stderr 2");
+
+$r = run_forked("$echo yes i know this is the way", {'discard_output' => 1});
+ok($r->{'stdout'} eq '', "discard_output stdout");
+ok($r->{'stderr'} eq '', "discard_output stderr");
+ok($r->{'merged'} eq '', "discard_output merged");
+ok($r->{'err_msg'} eq '', "discard_output err_msg");
