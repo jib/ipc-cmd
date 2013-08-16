@@ -359,9 +359,9 @@ sub install_layered_signal {
 
   my %available_signals = map {$_ => 1} keys %SIG;
 
-  die("install_layered_signal got nonexistent signal name [$s]")
+  Carp::confess("install_layered_signal got nonexistent signal name [$s]")
     unless defined($available_signals{$s});
-  die("install_layered_signal expects coderef")
+  Carp::confess("install_layered_signal expects coderef")
     if !ref($handler_code) || ref($handler_code) ne 'CODE';
 
   my $previous_handler = $SIG{$s};
@@ -556,7 +556,7 @@ sub open3_run {
 
     foreach my $fd ($select->can_read(1/100)) {
       my $str = $child_output->{$fd->fileno};
-      die("child stream not found: $fd") unless $str;
+      Carp::confess("child stream not found: $fd") unless $str;
 
       my $data;
       my $count = $fd->sysread($data, $str->{'block_size'});
@@ -575,7 +575,7 @@ sub open3_run {
         $fd->close();
       }
       else {
-        die("error during sysread: " . $!);
+        Carp::confess("error during sysread: " . $!);
       }
     }
   }
@@ -751,11 +751,11 @@ sub run_forked {
     my $parent_info_socket;
 
     socketpair($child_stdout_socket, $parent_stdout_socket, &Socket::AF_UNIX, &Socket::SOCK_STREAM, &Socket::PF_UNSPEC) ||
-      die ("socketpair: $!");
+      Carp::confess ("socketpair: $!");
     socketpair($child_stderr_socket, $parent_stderr_socket, &Socket::AF_UNIX, &Socket::SOCK_STREAM, &Socket::PF_UNSPEC) ||
-      die ("socketpair: $!");
+      Carp::confess ("socketpair: $!");
     socketpair($child_info_socket, $parent_info_socket, &Socket::AF_UNIX, &Socket::SOCK_STREAM, &Socket::PF_UNSPEC) ||
-      die ("socketpair: $!");
+      Carp::confess ("socketpair: $!");
 
     $child_stdout_socket->autoflush(1);
     $parent_stdout_socket->autoflush(1);
@@ -779,19 +779,19 @@ sub run_forked {
       # prepare sockets to read from child
 
       $flags = 0;
-      fcntl($child_stdout_socket, POSIX::F_GETFL, $flags) || die "can't fnctl F_GETFL: $!";
+      fcntl($child_stdout_socket, POSIX::F_GETFL, $flags) || Carp::confess "can't fnctl F_GETFL: $!";
       $flags |= POSIX::O_NONBLOCK;
-      fcntl($child_stdout_socket, POSIX::F_SETFL, $flags) || die "can't fnctl F_SETFL: $!";
+      fcntl($child_stdout_socket, POSIX::F_SETFL, $flags) || Carp::confess "can't fnctl F_SETFL: $!";
 
       $flags = 0;
-      fcntl($child_stderr_socket, POSIX::F_GETFL, $flags) || die "can't fnctl F_GETFL: $!";
+      fcntl($child_stderr_socket, POSIX::F_GETFL, $flags) || Carp::confess "can't fnctl F_GETFL: $!";
       $flags |= POSIX::O_NONBLOCK;
-      fcntl($child_stderr_socket, POSIX::F_SETFL, $flags) || die "can't fnctl F_SETFL: $!";
+      fcntl($child_stderr_socket, POSIX::F_SETFL, $flags) || Carp::confess "can't fnctl F_SETFL: $!";
 
       $flags = 0;
-      fcntl($child_info_socket, POSIX::F_GETFL, $flags) || die "can't fnctl F_GETFL: $!";
+      fcntl($child_info_socket, POSIX::F_GETFL, $flags) || Carp::confess "can't fnctl F_GETFL: $!";
       $flags |= POSIX::O_NONBLOCK;
-      fcntl($child_info_socket, POSIX::F_SETFL, $flags) || die "can't fnctl F_SETFL: $!";
+      fcntl($child_info_socket, POSIX::F_SETFL, $flags) || Carp::confess "can't fnctl F_SETFL: $!";
 
   #    print "child $pid started\n";
 
@@ -908,7 +908,7 @@ sub run_forked {
 
         foreach my $fd ($select->can_read(1/100)) {
           my $str = $child_output->{$fd->fileno};
-          die("child stream not found: $fd") unless $str;
+          Carp::confess("child stream not found: $fd") unless $str;
 
           my $data = "";
           my $count = $fd->sysread($data, $str->{'block_size'});
@@ -932,7 +932,7 @@ sub run_forked {
             }
           }
           else {
-            die("error during sysread on [$fd]: " . $!);
+            Carp::confess("error during sysread on [$fd]: " . $!);
           }
 
           # $data contains only full lines (or last line if it was unfinished read
@@ -955,7 +955,7 @@ sub run_forked {
             # we don't expect any other data in info socket, so it's
             # some strange violation of protocol, better know about this
             if ($data) {
-              die("info protocol violation: [$data]");
+              Carp::confess("info protocol violation: [$data]");
             }
           }
           if ($str->{'protocol'} eq 'stdout') {
@@ -1065,7 +1065,7 @@ sub run_forked {
       return $o;
     }
     else {
-      die("cannot fork: $!") unless defined($pid);
+      Carp::confess("cannot fork: $!") unless defined($pid);
 
       # create new process session for open3 call,
       # so we hopefully can kill all the subprocesses
@@ -1073,7 +1073,7 @@ sub run_forked {
       # which do setsid theirselves -- can't do anything
       # with those)
 
-      POSIX::setsid() || die("Error running setsid: " . $!);
+      POSIX::setsid() || Carp::confess("Error running setsid: " . $!);
 
       if ($opts->{'child_BEGIN'} && ref($opts->{'child_BEGIN'}) eq 'CODE') {
         $opts->{'child_BEGIN'}->();
@@ -1098,8 +1098,8 @@ sub run_forked {
       elsif (ref($cmd) eq 'CODE') {
         # reopen STDOUT and STDERR for child code:
         # https://rt.cpan.org/Ticket/Display.html?id=85912
-        open STDOUT, '>&', $parent_stdout_socket || die("Unable to reopen STDOUT: $!\n");
-        open STDERR, '>&', $parent_stderr_socket || die("Unable to reopen STDERR: $!\n");
+        open STDOUT, '>&', $parent_stdout_socket || Carp::confess("Unable to reopen STDOUT: $!\n");
+        open STDERR, '>&', $parent_stderr_socket || Carp::confess("Unable to reopen STDERR: $!\n");
 
         $child_exit_code = $cmd->({
           'opts' => $opts,
