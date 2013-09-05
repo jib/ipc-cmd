@@ -1,3 +1,9 @@
+Changes for 0.85_01 Thu Sep  5 20:30:51 BST 2013
+=================================================
+
+  Enhancements:
+  * run_forked() now uses Time::HiRes and Carp
+
 Changes for 0.84    Tue Aug  6 10:03:03 BST 2013
 =================================================
 
