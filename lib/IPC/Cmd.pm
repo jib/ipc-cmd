@@ -516,7 +516,7 @@ sub open3_run {
   my $child_finished = 0;
 
   my $got_sig_child = 0;
-  $SIG{'CHLD'} = sub { $got_sig_child = Time::HiRes::clock_gettime(&Time::HiRes::CLOCK_MONOTONIC); };
+  $SIG{'CHLD'} = sub { $got_sig_child = time(); };
 
   while(!$child_finished && ($child_out->opened || $child_err->opened)) {
 
@@ -903,10 +903,15 @@ sub run_forked {
 
         if ($waitpid eq -1) {
           $child_finished = 1;
-          next;
         }
 
-        foreach my $fd ($select->can_read(1/100)) {
+        my $ready_fds = [];
+        push @{$ready_fds}, $select->can_read(1/100);
+
+        READY_FDS: while (scalar(@{$ready_fds})) {
+          my $fd = shift @{$ready_fds};
+          $ready_fds = [grep {$_ ne $fd} @{$ready_fds}];
+
           my $str = $child_output->{$fd->fileno};
           Carp::confess("child stream not found: $fd") unless $str;
 
@@ -978,6 +983,15 @@ sub run_forked {
               $opts->{'stderr_handler'}->($data);
             }
           }
+ 
+          # process may finish (waitpid returns -1) before
+          # we've read all of its output because of buffering;
+          # so try to read all the way it is possible to read
+          # in such case - this shouldn't be too much (unless
+          # the buffer size is HUGE -- should introduce
+          # another counter in such case, maybe later)
+          #
+          push @{$ready_fds}, $select->can_read(1/100) if $child_finished;
         }
 
         Time::HiRes::usleep(1);
