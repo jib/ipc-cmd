@@ -1849,7 +1849,7 @@ sub _pp_child_error {
 
     } elsif ( $ce & 127 ) {
         ### some signal
-        $str = loc( "'%1' died with signal %d, %s coredump\n",
+        $str = loc( "'%1' died with signal %2, %3 coredump",
                $pp_cmd, ($ce & 127), ($ce & 128) ? 'with' : 'without');
 
     } else {
