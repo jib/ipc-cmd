@@ -364,8 +364,6 @@ sub can_use_run_forked {
 }
 
 sub get_monotonic_time {
-    my ($reference_variable) = @_;
-
     if ($HAVE_MONOTONIC) {
         return Time::HiRes::clock_gettime(&Time::HiRes::CLOCK_MONOTONIC);
     }
