@@ -15,6 +15,7 @@ BEGIN {
     use vars        qw[ @ISA $VERSION @EXPORT_OK $VERBOSE $DEBUG
                         $USE_IPC_RUN $USE_IPC_OPEN3 $CAN_USE_RUN_FORKED $WARN
                         $INSTANCES $ALLOW_NULL_ARGS
+                        $HAVE_MONOTONIC
                     ];
 
     $VERSION        = '0.85_02';
@@ -37,6 +38,16 @@ BEGIN {
         require Win32 if IS_WIN32;
     };
     $CAN_USE_RUN_FORKED = $@ || !IS_VMS && !IS_WIN32;
+
+    eval {
+        my $wait_start_time = Time::HiRes::clock_gettime(&Time::HiRes::CLOCK_MONOTONIC);
+    };
+    if ($@) {
+        $HAVE_MONOTONIC = 0;
+    }
+    else {
+        $HAVE_MONOTONIC = 1;
+    }
 
     @ISA            = qw[Exporter];
     @EXPORT_OK      = qw[can_run run run_forked QUOTE];
@@ -352,6 +363,42 @@ sub can_use_run_forked {
     return $CAN_USE_RUN_FORKED eq "1";
 }
 
+sub get_monotonic_time {
+    if ($HAVE_MONOTONIC) {
+        return Time::HiRes::clock_gettime(&Time::HiRes::CLOCK_MONOTONIC);
+    }
+    else {
+        return time();
+    }
+}
+
+sub adjust_monotonic_start_time {
+    my ($ref_vars, $now, $previous) = @_;
+
+    # workaround only for those systems which don't have
+    # Time::HiRes::CLOCK_MONOTONIC (Mac OSX in particular)
+    return if $HAVE_MONOTONIC;
+
+    # don't have previous monotonic value (only happens once
+    # in the beginning of the program execution)
+    return unless $previous;
+
+    my $time_diff = $now - $previous;
+
+    # adjust previously saved time with the skew value which is
+    # either negative when clock moved back or more than 5 seconds --
+    # assuming that event loop does happen more often than once
+    # per five seconds, which might not be always true (!) but
+    # hopefully that's ok, because it's just a workaround
+    if ($time_diff > 5 || $time_diff < 0) {
+        foreach my $ref_var (@{$ref_vars}) {
+            if (defined($$ref_var)) {
+                $$ref_var = $$ref_var + $time_diff;
+            }
+        }
+    }
+}
+
 # incompatible with POSIX::SigAction
 #
 sub install_layered_signal {
@@ -419,14 +466,32 @@ sub kill_gently {
     kill(-15, $pid);
   }
 
+  my $do_wait = 1;
   my $child_finished = 0;
-  my $wait_start_time = Time::HiRes::clock_gettime(&Time::HiRes::CLOCK_MONOTONIC);
 
-  while (!$child_finished && $wait_start_time + $opts->{'wait_time'} > Time::HiRes::clock_gettime(&Time::HiRes::CLOCK_MONOTONIC)) {
-    my $waitpid = waitpid($pid, POSIX::WNOHANG);
-    if ($waitpid eq -1) {
-      $child_finished = 1;
+  my $wait_start_time = get_monotonic_time();
+  my $now;
+  my $previous_monotonic_value;
+
+  while ($do_wait) {
+    $previous_monotonic_value = $now;
+    $now = get_monotonic_time();
+    
+    adjust_monotonic_start_time([\$wait_start_time], $now, $previous_monotonic_value);
+
+    if ($now > $wait_start_time + $opts->{'wait_time'}) {
+        $do_wait = 0;
+        next;
     }
+
+    my $waitpid = waitpid($pid, POSIX::WNOHANG);
+
+    if ($waitpid eq -1) {
+        $child_finished = 1;
+        $do_wait = 0;
+        next;
+    }
+    
     Time::HiRes::usleep(250000); # quarter of a second
   }
 
@@ -764,7 +829,7 @@ sub run_forked {
     $child_info_socket->autoflush(1);
     $parent_info_socket->autoflush(1);
 
-    my $start_time = Time::HiRes::clock_gettime(&Time::HiRes::CLOCK_MONOTONIC);
+    my $start_time = get_monotonic_time();
 
     my $pid;
     if ($pid = fork) {
@@ -828,27 +893,30 @@ sub run_forked {
       my $child_killed_by_signal = 0;
       my $parent_died = 0;
 
+      my $last_parent_check = 0;
       my $got_sig_child = 0;
       my $got_sig_quit = 0;
       my $orig_sig_child = $SIG{'CHLD'};
 
-      $SIG{'CHLD'} = sub { $got_sig_child = Time::HiRes::clock_gettime(&Time::HiRes::CLOCK_MONOTONIC); };
+      $SIG{'CHLD'} = sub { $got_sig_child = get_monotonic_time(); };
 
       if ($opts->{'terminate_on_signal'}) {
-        install_layered_signal($opts->{'terminate_on_signal'}, sub { $got_sig_quit = Time::HiRes::clock_gettime(&Time::HiRes::CLOCK_MONOTONIC); });
+        install_layered_signal($opts->{'terminate_on_signal'}, sub { $got_sig_quit = time(); });
       }
 
       my $child_child_pid;
+      my $now;
+      my $previous_monotonic_value;
 
       while (!$child_finished) {
-        my $now = Time::HiRes::clock_gettime(&Time::HiRes::CLOCK_MONOTONIC);
+        $previous_monotonic_value = $now;
+        $now = get_monotonic_time();
+
+        adjust_monotonic_start_time([\$start_time, \$last_parent_check, \$got_sig_child], $now, $previous_monotonic_value);
 
         if ($opts->{'terminate_on_parent_sudden_death'}) {
-          $opts->{'runtime'}->{'last_parent_check'} = 0
-            unless defined($opts->{'runtime'}->{'last_parent_check'});
-
           # check for parent once each five seconds
-          if ($now - $opts->{'runtime'}->{'last_parent_check'} > 5) {
+          if ($now > $last_parent_check + 5) {
             if (getppid() eq "1") {
               kill_gently ($pid, {
                 'first_kill_type' => 'process_group',
@@ -858,13 +926,13 @@ sub run_forked {
               $parent_died = 1;
             }
 
-            $opts->{'runtime'}->{'last_parent_check'} = $now;
+            $last_parent_check = $now;
           }
         }
 
         # user specified timeout
         if ($opts->{'timeout'}) {
-          if ($now - $start_time > $opts->{'timeout'}) {
+          if ($now > $start_time + $opts->{'timeout'}) {
             kill_gently ($pid, {
               'first_kill_type' => 'process_group',
               'final_kill_type' => 'process_group',
@@ -878,7 +946,7 @@ sub run_forked {
         # kill process after that and finish wait loop;
         # shouldn't ever happen -- remove this code?
         if ($got_sig_child) {
-          if ($now - $got_sig_child > 10) {
+          if ($now > $got_sig_child + 10) {
             print STDERR "waitpid did not return -1 for 10 seconds after SIG_CHLD, killing [$pid]\n";
             kill (-9, $pid);
             $child_finished = 1;
