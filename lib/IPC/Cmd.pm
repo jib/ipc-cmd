@@ -46,7 +46,7 @@ BEGIN {
         $HAVE_MONOTONIC = 0;
     }
     else {
-        $HAVE_MONOTONIC = 0;
+        $HAVE_MONOTONIC = 1;
     }
 
     @ISA            = qw[Exporter];
