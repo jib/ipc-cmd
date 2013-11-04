@@ -375,14 +375,25 @@ sub get_monotonic_time {
 sub adjust_monotonic_start_time {
     my ($ref_vars, $now, $previous) = @_;
 
-    if (!$HAVE_MONOTONIC) {
-        if ($previous) {
-            my $time_diff = $now - $previous;
+    # workaround only for those systems which don't have
+    # Time::HiRes::CLOCK_MONOTONIC (Mac OSX in particular)
+    return if $HAVE_MONOTONIC;
 
-            if ($time_diff > 5 || $time_diff < 0) {
-                foreach my $ref_var (@{$ref_vars}) {
-                    $$ref_var = $$ref_var + $time_diff;
-                }
+    # don't have previous monotonic value (only happens once
+    # in the beginning of the program execution)
+    return unless $previous;
+
+    my $time_diff = $now - $previous;
+
+    # adjust previously saved time with the skew value which is
+    # either negative when clock moved back or more than 5 seconds --
+    # assuming that event loop does happen more often than once
+    # per five seconds, which might not be always true (!) but
+    # hopefully that's ok, because it's just a workaround
+    if ($time_diff > 5 || $time_diff < 0) {
+        foreach my $ref_var (@{$ref_vars}) {
+            if (defined($$ref_var)) {
+                $$ref_var = $$ref_var + $time_diff;
             }
         }
     }
