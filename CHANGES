@@ -1,3 +1,13 @@
+0.86 Mon Nov  4 14:09:42 GMT 2013
+======================================
+
+  Bug fixes:
+  * run_forked: workaround absent CLOCK_MONOTONIC on OSX (Petya Kohts)
+  * RT#89770 Patch to fix error reporting if command killed by signal
+    (Ed Avis)
+  * Make the false test more forgiving, for Solaris and other SVR*
+    (bingos)
+
 0.85_02 Thu Oct 10 13:59:34 BST 2013
 ======================================
 
