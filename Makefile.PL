@@ -7,6 +7,7 @@ my $prereqs = {
     'Module::Load::Conditional' => 0,
     'Locale::Maketext::Simple'  => 0,
     'File::Spec'                => 0,
+    'File::Temp'                => 0,
     'ExtUtils::MakeMaker'       => 0,
 };
 
