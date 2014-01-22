@@ -1,3 +1,8 @@
+0.92 Wed Jan 22 19:57:27 GMT 2014
+
+  Test fixes:
+  * Use File::Temp in run_forked tests (hugmeir)
+
 0.90 Mon Nov 18 15:08:15 GMT 2013
 
   Misc:
