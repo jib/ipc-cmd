@@ -568,7 +568,8 @@ sub open3_run {
     # it will terminate only after child
     # has terminated (except for SIGKILL,
     # which is specially handled)
-    foreach my $s (keys %SIG) {
+    SIGNAL: foreach my $s (keys %SIG) {
+        next SIGNAL if $s eq '__WARN__' or $s eq '__DIE__'; # Skip and don't clobber __DIE__ & __WARN__
         my $sig_handler;
         $sig_handler = sub {
             kill("$s", $pid);
