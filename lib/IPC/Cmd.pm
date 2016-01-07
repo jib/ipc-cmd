@@ -399,6 +399,14 @@ sub adjust_monotonic_start_time {
     }
 }
 
+sub uninstall_signals {
+		return unless defined($IPC::Cmd::{'__old_signals'});
+
+		foreach my $sig_name (keys %{$IPC::Cmd::{'__old_signals'}}) {
+				$SIG{$sig_name} = $IPC::Cmd::{'__old_signals'}->{$sig_name};
+		}
+}
+
 # incompatible with POSIX::SigAction
 #
 sub install_layered_signal {
@@ -410,6 +418,10 @@ sub install_layered_signal {
     unless defined($available_signals{$s});
   Carp::confess("install_layered_signal expects coderef")
     if !ref($handler_code) || ref($handler_code) ne 'CODE';
+
+  $IPC::Cmd::{'__old_signals'} = {}
+  		unless defined($IPC::Cmd::{'__old_signals'});
+	$IPC::Cmd::{'__old_signals'}->{$s} = $SIG{$s};
 
   my $previous_handler = $SIG{$s};
 
@@ -1145,6 +1157,8 @@ sub run_forked {
       else {
         delete($SIG{'CHLD'});
       }
+
+      uninstall_signals();
 
       return $o;
     }
