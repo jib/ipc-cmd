@@ -857,18 +857,15 @@ sub run_forked {
 
       # prepare sockets to read from child
 
-      $flags = 0;
-      fcntl($child_stdout_socket, POSIX::F_GETFL, $flags) || Carp::confess "can't fnctl F_GETFL: $!";
+      $flags = fcntl($child_stdout_socket, POSIX::F_GETFL, 0) || Carp::confess "can't fnctl F_GETFL: $!";
       $flags |= POSIX::O_NONBLOCK;
       fcntl($child_stdout_socket, POSIX::F_SETFL, $flags) || Carp::confess "can't fnctl F_SETFL: $!";
 
-      $flags = 0;
-      fcntl($child_stderr_socket, POSIX::F_GETFL, $flags) || Carp::confess "can't fnctl F_GETFL: $!";
+      $flags = fcntl($child_stderr_socket, POSIX::F_GETFL, 0) || Carp::confess "can't fnctl F_GETFL: $!";
       $flags |= POSIX::O_NONBLOCK;
       fcntl($child_stderr_socket, POSIX::F_SETFL, $flags) || Carp::confess "can't fnctl F_SETFL: $!";
 
-      $flags = 0;
-      fcntl($child_info_socket, POSIX::F_GETFL, $flags) || Carp::confess "can't fnctl F_GETFL: $!";
+      $flags = fcntl($child_info_socket, POSIX::F_GETFL, 0) || Carp::confess "can't fnctl F_GETFL: $!";
       $flags |= POSIX::O_NONBLOCK;
       fcntl($child_info_socket, POSIX::F_SETFL, $flags) || Carp::confess "can't fnctl F_SETFL: $!";
 
