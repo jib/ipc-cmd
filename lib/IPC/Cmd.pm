@@ -1948,6 +1948,8 @@ sub _pp_child_error {
 
 1;
 
+__END__
+
 =head2 $q = QUOTE
 
 Returns the character used for quoting strings on this platform. This is
@@ -1961,8 +1963,6 @@ You can use it as follows:
 
 This makes sure that C<foo bar> is treated as a string, rather than two
 separate arguments to the C<echo> function.
-
-__END__
 
 =head1 HOW IT WORKS
 
