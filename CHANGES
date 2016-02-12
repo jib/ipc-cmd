@@ -1,3 +1,11 @@
+0.94 Fri Feb 12 18:55:05 GMT 2016
+
+  Bug fixes:
+  * move __END__ above POD in documentation (plicease)
+  * Don't clobber $SIG{__DIE__} and $SIG{__WARN__} in open3_run() (avar)
+  * Fix 'terminate_on_signal' segfaulting (Petya Kohts)
+  * Fix usage of fcntl(..., F_GETFL, ...) (tonyc)
+
 0.92 Wed Jan 22 19:57:27 GMT 2014
 
   Test fixes:
