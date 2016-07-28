@@ -1,3 +1,9 @@
+0.96 Thu Jul 28 11:17:12 BST 2016
+
+  Bug fixes:
+  * Require Module::Load::Conditional 0.66 to resolve
+    CVE-2016-1238: avoid loading optional modules from default .
+
 0.94 Fri Feb 12 18:55:05 GMT 2016
 
   Bug fixes:
