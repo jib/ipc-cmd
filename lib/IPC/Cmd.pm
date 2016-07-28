@@ -60,6 +60,8 @@ use Text::ParseWords            ();             # import ONLY if needed!
 use Module::Load::Conditional   qw[can_load];
 use Locale::Maketext::Simple    Style => 'gettext';
 
+local $Module::Load::Conditional::FORCE_SAFE_INC = 1;
+
 =pod
 
 =head1 NAME

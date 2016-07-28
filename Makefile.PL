@@ -4,7 +4,7 @@ use ExtUtils::MakeMaker;
 my $prereqs = {
     'Test::More'                => 0,
     'Params::Check'             => '0.20',
-    'Module::Load::Conditional' => 0,
+    'Module::Load::Conditional' => '0.66',
     'Locale::Maketext::Simple'  => 0,
     'File::Spec'                => 0,
     'File::Temp'                => 0,
