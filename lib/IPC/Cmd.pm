@@ -242,7 +242,7 @@ sub can_run {
     } else {
         for my $dir (
             File::Spec->path,
-            File::Spec->curdir
+            ( IS_WIN32 ? File::Spec->curdir : () )
         ) {
             next if ! $dir || ! -d $dir;
             my $abs = File::Spec->catfile( IS_WIN32 ? Win32::GetShortPathName( $dir ) : $dir, $command);
