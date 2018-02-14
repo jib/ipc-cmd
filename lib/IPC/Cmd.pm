@@ -531,6 +531,7 @@ sub open3_run {
     $child_err->autoflush(1);
 
     my $pid = open3($child_in, $child_out, $child_err, $cmd);
+    Time::HiRes::usleep(1);
 
     # push my child's pid to our parent
     # so in case i am killed parent
