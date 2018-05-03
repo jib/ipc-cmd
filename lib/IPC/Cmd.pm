@@ -6,6 +6,7 @@ BEGIN {
 
     use constant IS_VMS         => $^O eq 'VMS'                       ? 1 : 0;
     use constant IS_WIN32       => $^O eq 'MSWin32'                   ? 1 : 0;
+    use constant IS_HPUX        => $^O eq 'hpux'                      ? 1 : 0;
     use constant IS_WIN98       => (IS_WIN32 and !Win32::IsWinNT())   ? 1 : 0;
     use constant ALARM_CLASS    => __PACKAGE__ . '::TimeOut';
     use constant SPECIAL_CHARS  => qw[< > | &];
@@ -531,7 +532,7 @@ sub open3_run {
     $child_err->autoflush(1);
 
     my $pid = open3($child_in, $child_out, $child_err, $cmd);
-    Time::HiRes::usleep(1);
+    Time::HiRes::usleep(1) if IS_HPUX;
 
     # will consider myself orphan if my ppid changes
     # from this one:
