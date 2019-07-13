@@ -19,7 +19,7 @@ BEGIN {
                         $HAVE_MONOTONIC
                     ];
 
-    $VERSION        = '1.02';
+    $VERSION        = '1.04';
     $VERBOSE        = 0;
     $DEBUG          = 0;
     $WARN           = 1;
